@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { registerUser } from '../storage/userStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type PackagesScreenProps = {
@@ -91,7 +90,7 @@ export default function PackagesScreen({
     useState<'monthly' | 'quarterly'>('monthly');
   const [acceptPolicy, setAcceptPolicy] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     Keyboard.dismiss();
 
     if (!selectedPackage) {
@@ -110,75 +109,47 @@ export default function PackagesScreen({
         ? pkg?.monthlyPrice
         : pkg?.quarterlyPrice;
 
-    Alert.alert(
-      'تأكيد التسجيل',
-      `الاسم: ${registrationData.name}\nالمهنة: ${registrationData.jobTitle}\nالبريد الإلكتروني: ${registrationData.email}\nالباقة: ${pkg?.nameAr}\nالمدة: ${
-        selectedDuration === 'monthly' ? 'شهري' : 'ربع سنوي'
-      }\nالسعر: $${price}`,
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        {
-          text: 'تأكيد',
-          onPress: async () => {
-            const newUser = registerUser({
-              ...registrationData,
-              subscriptionPackage: pkg?.nameAr || '',
-              subscriptionDuration: selectedDuration,
-              subscriptionPrice: price || 0,
-            });
+    // ⏱ إنشاء تواريخ الاشتراك
+    const subscriptionStart = new Date();
+    const subscriptionEnd = new Date(subscriptionStart);
 
-   // ⏱ تحديد تواريخ الاشتراك
-            const subscriptionStart = new Date();
-            const subscriptionEnd = new Date(subscriptionStart);
+    if (selectedDuration === 'monthly') {
+      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+    } else {
+      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3);
+    }
 
-            if (selectedDuration === 'monthly') {
-            subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-            } else {
-            subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3);
-            }
+    const fullUserData = {
+      ...registrationData,
 
-            const fullUserData = {
-            ...registrationData,
+      subscriptionPackage: pkg?.nameAr || '',
+      subscriptionDuration: selectedDuration,
+      subscriptionPrice: price || 0,
 
-            subscriptionPackage: pkg?.nameAr || '',
-            subscriptionDuration: selectedDuration,
-            subscriptionPrice: price || 0,
+      subscriptionStart: subscriptionStart.toISOString(),
+      subscriptionEnd: subscriptionEnd.toISOString(),
+    };
 
-            // 🟢 التاريخ بصيغة ISO (واضحة وسهلة للقراءة والمعالجة)
-            subscriptionStart: subscriptionStart.toISOString(),
-            subscriptionEnd: subscriptionEnd.toISOString(),
-            };
+    try {
+      await AsyncStorage.setItem(
+        'currentUser',
+        JSON.stringify(fullUserData)
+      );
+
+      await AsyncStorage.setItem(
+        'userRegistrationDraft',
+        JSON.stringify(fullUserData)
+      );
+    } catch (err) {
+      console.log('Storage error', err);
+    }
 
 
-            try {
-                  await AsyncStorage.setItem(
-                'userRegistrationDraft',
-                JSON.stringify(fullUserData)
-              );
+  onConfirm(fullUserData);
 
-              onConfirm(fullUserData); // ⬅ الانتقال أولاً
-
-          Alert.alert(
-                '👍 تم الحفظ',
-                'تم إنشاء الحساب وسيتم عرض ملفك الشخصي',
-                [
-                    {
-                    text: 'موافق',
-                    onPress: () => {
-                        onConfirm(fullUserData); // ⬅ الانتقال مرة واحدة فقط
-                    },
-                    },
-                ]
-                );
-
-            } catch (err) {
-              console.log('Storage error', err);
-              onConfirm(fullUserData); // fallback حتى لو فشل التخزين
-            }
-          },
-        },
-      ]
-    );
+      requestAnimationFrame(() => {
+        Alert.alert('👍 تم التسجيل بنجاح', 'تم حفظ بيانات حسابك بنجاح');
+      });
   };
 
   return (
@@ -433,7 +404,6 @@ export default function PackagesScreen({
 }
 
 const styles = StyleSheet.create({
-  /* ⬅ نفس ستايلك تمامًا بدون أي تغيير */
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   scrollContent: { flexGrow: 1, paddingBottom: 32 },
   formCard: {

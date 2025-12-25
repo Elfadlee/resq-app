@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { BottomNavigation, useTheme } from 'react-native-paper';
@@ -8,32 +8,37 @@ type Route = {
   title: string;
   focusedIcon: string;
   unfocusedIcon: string;
+  path: string; // ✅ إضافة path
 };
 
 const ROUTES: Route[] = [
   {
     key: 'profile',
     title: 'صفحتي',
-    focusedIcon: 'account',
+    focusedIcon:  'account',
     unfocusedIcon: 'account-outline',
+    path: '/screens/ProfileScreen',
   },
   {
     key: 'notifications',
     title: 'الإشعارات',
     focusedIcon: 'bell',
     unfocusedIcon: 'bell-outline',
+    path: '/screens/notifications',
   },
   {
     key: 'orders',
     title: 'طلباتي',
     focusedIcon: 'briefcase',
     unfocusedIcon: 'briefcase-outline',
+    path: '/screens/orders',
   },
   {
     key: 'home',
     title: 'الرئيسية',
     focusedIcon: 'home',
     unfocusedIcon: 'home-outline',
+    path: '/',
   },
 ];
 
@@ -41,35 +46,54 @@ const FOOTER_HEIGHT = Platform.OS === 'ios' ? 85 : 65;
 
 const AppFooter = () => {
   const theme = useTheme();
-  const [index, setIndex] = React.useState(3);
+  const pathname = usePathname(); // ✅ الحصول على المسار الحالي
+
+  // ✅ تحديد الـ index بناءً على المسار الحالي
+  const getCurrentIndex = () => {
+    const currentRoute = ROUTES.findIndex(route => {
+      if (route.path === '/') {
+        return pathname === '/' || pathname === '/screens/MainScreen';
+      }
+      return pathname.includes(route.path);
+    });
+    return currentRoute >= 0 ? currentRoute : 3; // default to home
+  };
+
+  const [index, setIndex] = React. useState(getCurrentIndex());
+
+  // ✅ تحديث الـ index عند تغيير المسار
+  React.useEffect(() => {
+    setIndex(getCurrentIndex());
+  }, [pathname]);
 
   const handleIndexChange = (newIndex: number) => {
     setIndex(newIndex);
 
-    const routeKey = ROUTES[newIndex]?.key;
-    if (!routeKey) return;
+    const route = ROUTES[newIndex];
+    if (!route) return;
 
-    // Expo Router navigation (NO design change)
-    if (routeKey === 'home') {
-      router.replace('/');
-      return;
-    }
+    try {
+      if (route.key === 'home') {
+        router.push('/'); // أو '/screens/MainScreen' إذا موجود
+        return;
+      }
 
-    if (routeKey === 'profile') {
+      if (route.key === 'profile') {
+        router.push('/screens/ProfileScreen');
+        return;
+      }
 
-      router.push('/screens/ProfileScreen');
-      return;
-    }
+      if (route.key === 'orders') {
+        router.push('/screens/orders');
+        return;
+      }
 
-
-    if (routeKey === 'orders') {
-      router.push('/screens/orders');
-      return;
-    }
-
-    if (routeKey === 'notifications') {
-      router.push('/screens/notifications');
-      return;
+      if (route.key === 'notifications') {
+        router.push('/screens/notifications');
+        return;
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
   };
 
@@ -78,7 +102,7 @@ const AppFooter = () => {
       style={[
         styles.container,
         {
-          backgroundColor: theme.colors.primary,
+          backgroundColor: theme.colors. primary,
           height: FOOTER_HEIGHT,
         },
       ]}
@@ -99,16 +123,15 @@ const AppFooter = () => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    bottom: 0,
+    position:  'absolute',
+    bottom:  0,
     left: 0,
     right: 0,
     height: FOOTER_HEIGHT,
     elevation: 12,
     paddingTop: 12,
-
     shadowColor: '#f59e0b',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset:  { width: 0, height:  -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },
