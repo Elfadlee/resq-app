@@ -358,7 +358,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   );
 }
 
-// Info Row Component - RTL
+// Info Row Component - RTL - 
 const InfoRow = ({
   icon,
   label,
