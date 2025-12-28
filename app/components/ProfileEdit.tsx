@@ -1,6 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import storage from '../services/storage-helper';
 import { useState } from 'react';
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../services/firestore";
 import {
   Alert,
   FlatList,
@@ -44,7 +46,7 @@ const AREAS = [
 export default function ProfileEdit({ navigation, route }: any) {
   const { profile, onSave } = route.params;
 
-  const [name, setName] = useState(profile. name);
+  const [name, setName] = useState(profile.name);
   const [jobTitle, setJobTitle] = useState(profile.jobTitle);
   const [area, setArea] = useState(profile.area);
   const [mobile, setMobile] = useState(profile.mobile. replace('+964', ''));
@@ -73,7 +75,7 @@ export default function ProfileEdit({ navigation, route }: any) {
       Alert.alert('خطأ', 'الرجاء اختيار المنطقة');
       return;
     }
-    if (!mobile.trim() || mobile.length < 10) {
+    if (! mobile. trim() || mobile.length < 10) {
       Alert.alert('خطأ', 'الرجاء إدخال رقم هاتف صحيح');
       return;
     }
@@ -89,35 +91,50 @@ export default function ProfileEdit({ navigation, route }: any) {
     setSaving(true);
 
     const updatedProfile = {
-      ...profile,
+      ... profile,
       name:  name.trim(),
       jobTitle,
       area,
       mobile:  mobile.startsWith('+964') ? mobile : '+964' + mobile. trim(),
       email: email.trim(),
       description: description.trim(),
-      password:  password || profile.password,
+      password: password || profile.password,
     };
 
     try {
-      // حفظ في userProfile
-      await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+      // 🟡 تحديث في Firestore إذا كان لدينا ID
+      if (profile.id) {
+        const userRef = doc(db, "users", profile.id);
+        await updateDoc(userRef, {
+          name: updatedProfile.name,
+          jobTitle: updatedProfile.jobTitle,
+          area: updatedProfile.area,
+          mobile: updatedProfile.mobile,
+          email: updatedProfile.email,
+          description: updatedProfile.description,
+          password: updatedProfile.password,
+          "metadata.updatedAt": serverTimestamp(),
+        });
+      }
 
-      // تحديث في allUsers إذا موجود
-      const allUsersData = await AsyncStorage.getItem('allUsers');
-      if (allUsersData) {
-        const allUsers = JSON.parse(allUsersData);
-        const userIndex = allUsers.findIndex((u: any) => u.id === profile.id);
-        if (userIndex !== -1) {
-          allUsers[userIndex] = updatedProfile;
-          await AsyncStorage.setItem('allUsers', JSON.stringify(allUsers));
-        }
+      // 🔵 حفظ في Storage - userProfile
+      await storage. setObject('userProfile', updatedProfile);
+
+      // 🔵 حفظ في Storage - currentUser
+      await storage.setObject('currentUser', updatedProfile);
+
+      // 🔵 تحديث في allUsers إذا موجود
+      const allUsers = await storage.getObject<any[]>('allUsers') || [];
+      const userIndex = allUsers.findIndex((u: any) => u.id === profile.id);
+      if (userIndex !== -1) {
+        allUsers[userIndex] = updatedProfile;
+        await storage. setObject('allUsers', allUsers);
       }
 
       Alert.alert('نجاح', 'تم تحديث المعلومات بنجاح', [
         {
           text: 'حسناً',
-          onPress: () => {
+          onPress:  () => {
             onSave?. ();
             navigation.goBack();
           },
@@ -184,7 +201,7 @@ export default function ProfileEdit({ navigation, route }: any) {
                 style={styles.inputWrapper}
                 onPress={() => setAreaMenuVisible(true)}
               >
-                <Text style={[styles. dropdownText, !area && styles.placeholder]}>
+                <Text style={[styles.dropdownText, !area && styles.placeholder]}>
                   {area || 'اختر المنطقة'}
                 </Text>
                 <MaterialCommunityIcons name="map-marker" size={20} color="#FF9800" />
@@ -192,12 +209,12 @@ export default function ProfileEdit({ navigation, route }: any) {
             </View>
 
             {/* Mobile */}
-            <View style={styles. inputContainer}>
+            <View style={styles.inputContainer}>
               <Text style={styles.label}>رقم الهاتف *</Text>
               <View style={styles.inputWrapper}>
                 <View style={styles.mobileContainer}>
                   <TextInput
-                    style={styles. mobileInput}
+                    style={styles.mobileInput}
                     value={mobile}
                     onChangeText={setMobile}
                     placeholder="770 123 4567"
@@ -213,8 +230,8 @@ export default function ProfileEdit({ navigation, route }: any) {
 
             {/* Email */}
             <View style={styles.inputContainer}>
-              <Text style={styles. label}>البريد الإلكتروني *</Text>
-              <View style={styles. inputWrapper}>
+              <Text style={styles.label}>البريد الإلكتروني *</Text>
+              <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -299,7 +316,7 @@ export default function ProfileEdit({ navigation, route }: any) {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-              <Text style={styles. cancelButtonText}>إلغاء</Text>
+              <Text style={styles.cancelButtonText}>إلغاء</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -312,7 +329,7 @@ export default function ProfileEdit({ navigation, route }: any) {
           activeOpacity={1}
           onPress={() => setJobMenuVisible(false)}
         >
-          <View style={styles. modalContent}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>اختر المهنة</Text>
             <FlatList
@@ -394,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle:  {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Almarai-Bold',
     color: '#2D3561',
   },
@@ -427,10 +444,10 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     gap: 10,
   },
-  input:  {
+  input: {
     flex: 1,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Almarai-Regular',
     color: '#2D3748',
   },
@@ -510,7 +527,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#FFF',
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'Almarai-Bold',
   },
   cancelButton: {
@@ -520,15 +537,16 @@ const styles = StyleSheet.create({
     alignItems:  'center',
     borderWidth: 2,
     borderColor: '#E2E8F0',
+    marginBottom: 40,
   },
   cancelButtonText: {
     color: '#718096',
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'Almarai-Bold',
   },
   modalOverlay: {
-    flex:  1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flex: 1,
+    backgroundColor:  'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -559,7 +577,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical:  12,
     paddingHorizontal: 16,
-    borderBottomWidth:  1,
+    borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   menuItemText: {

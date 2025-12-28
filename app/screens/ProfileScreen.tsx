@@ -9,16 +9,45 @@ import RegistrationScreen from '../components/RegistrationScreen';
 import PackagesScreen from '../components/PackagesScreen';
 import ProfileBanner from '../components/ProfileBanner';
 import ProfileEdit from '../components/ProfileEdit'; // ✅ استيراد ProfileEdit
+import storage from '../services/storage-helper';
+import { db } from '../services/firestore';   // or ../services/firebase (depending on your file name)
 
-import {
-  registerUser,
-  loginUser,
-  getCurrentUser,
-  User
-} from '../storage/userStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const USERS_KEY = "allUsers";
+const CURRENT_USER_KEY = "currentUser";
+
+const getCurrentUser = async (): Promise<User | null> => {
+return await storage.getObject<User>(CURRENT_USER_KEY);};
+
+const loginUser = async (mobile: string, password: string) => {
+  const users = (await storage.getObject<User[]>(USERS_KEY)) || [];
+  return users.find(u => u.mobile === mobile && u.password === password) || null;
+};
+
+const registerUser = async (user: any) => {
+  const users = (await storage.getObject<User[]>(USERS_KEY)) || [];
+  users.push(user);
+
+  await storage.setObject(USERS_KEY, users);
+  await storage.setObject(CURRENT_USER_KEY, user);
+
+  return user;
+};
+
+
 type CurrentScreen = 'login' | 'register' | 'packages' | 'profile' | 'editProfile' | 'upgradePackage';
+
+type User = {
+  id?: string;
+  name: string;
+  mobile: string;
+  password: string;
+  jobTitle: string;
+  area: string;
+  description?: string;
+  subscription?: any;
+};
 
 export default function ProfileScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);

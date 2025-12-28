@@ -9,6 +9,7 @@ import AppHeader from '../components/AppHeader';
 import HeroSearch from '../components/HeroSearch';
 import ServiceCard from '../components/ServiceCard';
 
+
 export default function MainScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrollLocked, setScrollLocked] = useState(false); 
@@ -66,6 +67,7 @@ export default function MainScreen() {
 
         {/* HEADER */}
         <AppHeader onMenuOpen={() => setDrawerOpen(true)} />
+     
 
         {/* CONTENT */}
         <ScrollView

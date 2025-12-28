@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
     Alert,
     Keyboard,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -14,7 +15,7 @@ import {
 } from 'react-native';
 
 type LoginScreenProps = {
-    onLogin:  (mobile: string, password: string, rememberMe: boolean) => void;
+    onLogin: (mobile: string, password: string, rememberMe: boolean) => void;
     onGoToRegister: () => void;
 };
 
@@ -43,6 +44,10 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
+    
+    const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [sendingReset, setSendingReset] = useState(false);
 
     const handleMobileChange = (text: string) => {
         const convertedText = convertArabicToEnglish(text);
@@ -71,7 +76,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
     const handleLogin = () => {
         Keyboard.dismiss();
 
-        if (!mobile. trim() || mobile.length < 10) {
+        if (! mobile. trim() || mobile.length < 10) {
             Alert.alert('خطأ', 'يرجى إدخال رقم جوال صحيح (10 أرقام)');
             return;
         }
@@ -83,6 +88,34 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
 
         const englishPassword = convertArabicToEnglish(password);
         onLogin('+964' + mobile, englishPassword, rememberMe);
+    };
+
+    const handleForgotPassword = async () => {
+        Keyboard.dismiss();
+
+        if (!resetEmail.trim() || !resetEmail.includes('@')) {
+            Alert.alert('خطأ', 'يرجى إدخال بريد إلكتروني صحيح');
+            return;
+        }
+
+        setSendingReset(true);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            setSendingReset(false);
+            setForgotPasswordVisible(false);
+            setResetEmail('');
+
+            Alert.alert(
+                'تم الإرسال',
+                'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
+                [{ text: 'حسناً' }]
+            );
+        } catch (error) {
+            setSendingReset(false);
+            Alert.alert('خطأ', 'فشل إرسال البريد.  يرجى المحاولة مرة أخرى.');
+        }
     };
 
     return (
@@ -133,11 +166,11 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                         </View>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>كلمة المرور</Text>
+                            <Text style={styles. label}>كلمة المرور</Text>
                             <View
                                 style={[
-                                    styles. inputWrapper,
-                                    focusedField === 'password' && styles.inputWrapperFocused,
+                                    styles.inputWrapper,
+                                    focusedField === 'password' && styles. inputWrapperFocused,
                                 ]}
                             >
                                 <View style={styles.passwordInputContainer}>
@@ -147,7 +180,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                                         activeOpacity={0.7}
                                     >
                                         <MaterialCommunityIcons
-                                            name={showPassword ?  'eye-off' : 'eye'}
+                                            name={showPassword ? 'eye-off' :  'eye'}
                                             size={20}
                                             color="#666"
                                         />
@@ -169,7 +202,16 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                                 </View>
                                 <MaterialCommunityIcons name="lock" size={20} color="#FF9800" style={styles.icon} />
                             </View>
-                            <Text style={styles.helperText}>{password.length}/12 • استخدم الأرقام فقط</Text>
+                            <Text style={styles. helperText}>{password.length}/12 • استخدم الأرقام فقط</Text>
+                            
+                            {/* ✅ نسيت كلمة المرور هنا تحت */}
+                            <TouchableOpacity
+                                onPress={() => setForgotPasswordVisible(true)}
+                                activeOpacity={0.7}
+                                style={styles.forgotPasswordButton}
+                            >
+                                <Text style={styles.forgotPasswordText}>نسيت كلمة المرور؟</Text>
+                            </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity
@@ -195,7 +237,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                         </View>
 
                         <TouchableOpacity
-                            style={styles. registerButton}
+                            style={styles.registerButton}
                             onPress={onGoToRegister}
                             activeOpacity={0.8}
                         >
@@ -205,11 +247,78 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                     </View>
                 </View>
             </ScrollView>
+
+            {/* Modal */}
+            <Modal
+                visible={forgotPasswordVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setForgotPasswordVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => !sendingReset && setForgotPasswordVisible(false)}
+                >
+                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                        <View style={styles.modalHeader}>
+                            <MaterialCommunityIcons name="lock-reset" size={40} color="#FF9800" />
+                            <Text style={styles.modalTitle}>نسيت كلمة المرور</Text>
+                            <Text style={styles.modalSubtitle}>
+                                أدخل بريدك الإلكتروني لإرسال رابط إعادة تعيين كلمة المرور
+                            </Text>
+                        </View>
+
+                        <View style={styles.modalForm}>
+                            <Text style={styles.label}>البريد الإلكتروني</Text>
+                            <View style={styles.inputWrapper}>
+                                <RNTextInput
+                                    style={styles.modalInput}
+                                    value={resetEmail}
+                                    onChangeText={setResetEmail}
+                                    placeholder="example@email.com"
+                                    placeholderTextColor="#999"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    textAlign="right"
+                                    editable={! sendingReset}
+                                />
+                                <MaterialCommunityIcons name="email" size={20} color="#FF9800" />
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.submitButton, sendingReset && styles.submitButtonDisabled]}
+                                onPress={handleForgotPassword}
+                                disabled={sendingReset}
+                                activeOpacity={0.8}
+                            >
+                                {sendingReset ? (
+                                    <Text style={styles.submitButtonText}>جاري الإرسال...</Text>
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="email-send" size={20} color="#fff" />
+                                        <Text style={styles.submitButtonText}>إرسال الرابط</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.modalCancelButton}
+                                onPress={() => setForgotPasswordVisible(false)}
+                                disabled={sendingReset}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.modalCancelText}>إلغاء</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
 
-const styles = StyleSheet. create({
+const styles = StyleSheet.create({
     loginContainer: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -231,7 +340,7 @@ const styles = StyleSheet. create({
                 shadowOpacity:  0.1,
                 shadowRadius: 12,
             },
-            android:  {
+            android: {
                 elevation: 4,
             },
         }),
@@ -242,32 +351,43 @@ const styles = StyleSheet. create({
         gap: 12,
     },
     headerTitle: {
-        fontSize: 22,
+        fontSize: 18,
         fontFamily: 'Almarai-Bold',
         color: '#1a1a1a',
         textAlign: 'center',
     },
     loginSubtitle: {
-        fontSize: 14,
+        fontSize: 12,
         fontFamily: 'Almarai-Regular',
         color: '#666',
         textAlign: 'center',
-        marginTop: 8,
+        marginTop:  8,
     },
     form: {
-        gap:  16,
+        gap: 16,
     },
     inputContainer: {
-        gap:  8,
+        gap: 8,
     },
-    label: {
+    label:  {
         fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#333',
         textAlign: 'right',
     },
+    forgotPasswordButton: {
+        alignSelf: 'flex-end',
+        marginTop: 4,
+        paddingVertical: 4,
+    },
+    forgotPasswordText: {
+        fontSize:  13,
+        fontFamily: 'Almarai-Bold',
+        color: '#FF9800',
+        textDecorationLine: 'underline',
+    },
     inputWrapper: {
-        flexDirection: 'row-reverse',
+        flexDirection:  'row-reverse',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#e0e0e0',
@@ -290,14 +410,14 @@ const styles = StyleSheet. create({
     },
     mobileInput: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Regular',
-        color:  '#1a1a1a',
+        color: '#1a1a1a',
         paddingVertical: 12,
         textAlign: 'right',
     },
     mobilePrefix: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#666',
         marginRight: 8,
@@ -309,7 +429,7 @@ const styles = StyleSheet. create({
     },
     passwordInput: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Regular',
         color:  '#1a1a1a',
         paddingVertical: 12,
@@ -328,12 +448,12 @@ const styles = StyleSheet. create({
         marginTop: 4,
     },
     checkboxContainer: {
-        flexDirection:  'row-reverse',
+        flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 12,
         marginTop: 8,
     },
-    checkbox:  {
+    checkbox: {
         width: 24,
         height: 24,
         borderWidth: 2,
@@ -349,7 +469,7 @@ const styles = StyleSheet. create({
     rememberMeText: {
         flex: 1,
         fontSize:  14,
-        fontFamily:  'Almarai-Regular',
+        fontFamily: 'Almarai-Regular',
         color: '#333',
         textAlign: 'right',
     },
@@ -362,12 +482,16 @@ const styles = StyleSheet. create({
         justifyContent: 'center',
         gap: 8,
     },
+    submitButtonDisabled:  {
+        backgroundColor: '#FFB84D',
+        opacity: 0.7,
+    },
     submitButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#fff',
     },
-    orDivider: {
+    orDivider:  {
         flexDirection: 'row',
         alignItems: 'center',
         marginVertical: 16,
@@ -395,8 +519,75 @@ const styles = StyleSheet. create({
         gap: 8,
     },
     registerButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
-        color: '#FF9800',
+        color:  '#FF9800',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor:  'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 24,
+        width:  '100%',
+        maxWidth: 400,
+        ... Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity:  0.3,
+                shadowRadius: 12,
+            },
+            android:  {
+                elevation: 8,
+            },
+        }),
+    },
+    modalHeader: {
+        alignItems: 'center',
+        marginBottom: 24,
+        gap: 12,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontFamily: 'Almarai-Bold',
+        color: '#1a1a1a',
+        textAlign:  'center',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        fontFamily: 'Almarai-Regular',
+        color:  '#666',
+        textAlign:  'center',
+        lineHeight: 22,
+    },
+    modalForm: {
+        gap: 16,
+    },
+    modalInput: {
+        flex: 1,
+        fontSize: 14,
+        fontFamily: 'Almarai-Regular',
+        color: '#1a1a1a',
+        paddingVertical: 12,
+        textAlign: 'right',
+    },
+    modalCancelButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+    },
+    modalCancelText:  {
+        fontSize: 14,
+        fontFamily: 'Almarai-Bold',
+        color: '#666',
     },
 });

@@ -1,4 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import storage from '../services/storage-helper';
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -11,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { db } from '../services/firestore';
 
 type PackagesScreenProps = {
   registrationData: any;
@@ -50,7 +52,7 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     id: 'pro',
     name: 'Pro',
     nameAr: 'احترافي',
-    icon: 'star',
+    icon:  'star',
     color: '#FF9800',
     monthlyPrice: 25,
     quarterlyPrice: 70,
@@ -66,7 +68,7 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     id: 'business',
     name: 'Business',
     nameAr: 'أعمال',
-    icon: 'crown',
+    icon:  'crown',
     color: '#9C27B0',
     monthlyPrice: 75,
     quarterlyPrice: 200,
@@ -98,7 +100,7 @@ export default function PackagesScreen({
       return;
     }
 
-    if (!acceptPolicy) {
+    if (! acceptPolicy) {
       Alert.alert('خطأ', 'يرجى الموافقة على سياسة الخصوصية');
       return;
     }
@@ -109,47 +111,94 @@ export default function PackagesScreen({
         ? pkg?.monthlyPrice
         : pkg?.quarterlyPrice;
 
-    // ⏱ إنشاء تواريخ الاشتراك
-    const subscriptionStart = new Date();
-    const subscriptionEnd = new Date(subscriptionStart);
+    // ⏱ تواريخ الاشتراك
+    const startAt = new Date();
+    const endAt = new Date(startAt);
 
     if (selectedDuration === 'monthly') {
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+      endAt.setMonth(endAt.getMonth() + 1);
     } else {
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3);
+      endAt.setMonth(endAt.getMonth() + 3);
     }
 
-    const fullUserData = {
+    // 🎯 بناء هيكل الداتا النهائي
+    const userData = {
       ...registrationData,
 
-      subscriptionPackage: pkg?.nameAr || '',
-      subscriptionDuration: selectedDuration,
-      subscriptionPrice: price || 0,
+      subscription: {
+        package: pkg?.id || "basic",
+        packageName: pkg?.nameAr || "أساسي",
+        duration: selectedDuration,
+        price: price || 0,
+        startAt:  startAt.toISOString(),
+        endAt: endAt. toISOString(),
+        isActive: true,
+      },
 
-      subscriptionStart: subscriptionStart.toISOString(),
-      subscriptionEnd: subscriptionEnd.toISOString(),
+      status: {
+        approved: true,
+        suspended: false,
+      },
+
+      metadata: {
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+      },
     };
 
     try {
-      await AsyncStorage.setItem(
-        'currentUser',
-        JSON.stringify(fullUserData)
-      );
+      // 🟡 حفظ في Firestore
+      const docRef = await addDoc(collection(db, "users"), userData);
 
-      await AsyncStorage.setItem(
-        'userRegistrationDraft',
-        JSON.stringify(fullUserData)
-      );
-    } catch (err) {
-      console.log('Storage error', err);
+      // 🔵 بيانات كاملة مع الـ ID
+      const userDataWithId = {
+        id:  docRef.id,
+        ... registrationData,
+        subscription: {
+          package: pkg?. id || "basic",
+          packageName: pkg?.nameAr || "أساسي",
+          duration: selectedDuration,
+          price: price || 0,
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          isActive: true,
+        },
+        status: {
+          approved:  true,
+          suspended: false,
+        },
+        metadata: {
+          createdAt: startAt. toISOString(),
+          updatedAt: startAt.toISOString(),
+          lastLogin: startAt.toISOString(),
+        },
+      };
+
+      // 🔵 حفظ في Storage - userProfile
+      await storage.setObject("userProfile", userDataWithId);
+
+      // 🔵 حفظ في Storage - currentUser
+      await storage.setObject("currentUser", userDataWithId);
+
+      // 🔵 إضافة إلى قائمة allUsers
+      try {
+        const allUsers = await storage.getObject<any[]>('allUsers') || [];
+        allUsers.push(userDataWithId);
+        await storage.setObject('allUsers', allUsers);
+      } catch (e) {
+        console.log("Error updating allUsers:", e);
+      }
+
+      // 🚀 إرسال البيانات للخطوة التالية
+      onConfirm(userDataWithId);
+
+      Alert.alert("👍 تم التسجيل", "تم إنشاء حسابك وحفظ البيانات بنجاح");
+
+    } catch (error) {
+      console.log("Firestore error:", error);
+      Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
     }
-
-
-  onConfirm(fullUserData);
-
-      requestAnimationFrame(() => {
-        Alert.alert('👍 تم التسجيل بنجاح', 'تم حفظ بيانات حسابك بنجاح');
-      });
   };
 
   return (
@@ -159,7 +208,7 @@ export default function PackagesScreen({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.formCard}>
+      <View style={styles. formCard}>
         <View style={styles.header}>
           <MaterialCommunityIcons name="crown" size={40} color="#FF9800" />
           <Text style={styles.headerTitle}>اختيار باقة الاشتراك</Text>
@@ -178,12 +227,12 @@ export default function PackagesScreen({
               </Text>
             </View>
 
-            <View style={styles.durationToggle}>
+            <View style={styles. durationToggle}>
               <TouchableOpacity
                 style={[
-                  styles.durationButton,
+                  styles. durationButton,
                   selectedDuration === 'monthly' &&
-                    styles.durationButtonActive,
+                    styles. durationButtonActive,
                 ]}
                 onPress={() => setSelectedDuration('monthly')}
                 activeOpacity={0.8}
@@ -201,7 +250,7 @@ export default function PackagesScreen({
 
               <TouchableOpacity
                 style={[
-                  styles.durationButton,
+                  styles. durationButton,
                   selectedDuration === 'quarterly' &&
                     styles.durationButtonActive,
                 ]}
@@ -229,7 +278,7 @@ export default function PackagesScreen({
                 const price =
                   selectedDuration === 'monthly'
                     ? pkg.monthlyPrice
-                    : pkg.quarterlyPrice;
+                    :  pkg.quarterlyPrice;
 
                 return (
                   <TouchableOpacity
@@ -260,7 +309,7 @@ export default function PackagesScreen({
                       </View>
                     )}
 
-                    <View style={styles.packageContent}>
+                    <View style={styles. packageContent}>
                       <View style={styles.packageLeft}>
                         <View
                           style={[
@@ -271,16 +320,16 @@ export default function PackagesScreen({
                           <MaterialCommunityIcons
                             name={pkg.icon as any}
                             size={32}
-                            color={pkg.color}
+                            color={pkg. color}
                           />
                         </View>
 
-                        <View style={styles.packageInfo}>
+                        <View style={styles. packageInfo}>
                           <Text style={styles.packageName}>
                             {pkg.nameAr}
                           </Text>
-                          <Text style={styles.packageNameEn}>
-                            {pkg.name}
+                          <Text style={styles. packageNameEn}>
+                            {pkg. name}
                           </Text>
                         </View>
                       </View>
@@ -302,13 +351,13 @@ export default function PackagesScreen({
                       </View>
                     </View>
 
-                    <View style={styles.packageFeatures}>
+                    <View style={styles. packageFeatures}>
                       {pkg.features.map((feature, index) => (
-                        <View key={index} style={styles.packageFeature}>
+                        <View key={index} style={styles. packageFeature}>
                           <MaterialCommunityIcons
                             name="check-circle"
                             size={16}
-                            color={pkg.color}
+                            color={pkg. color}
                           />
                           <Text style={styles.packageFeatureText}>
                             {feature}
@@ -321,7 +370,7 @@ export default function PackagesScreen({
                       <View
                         style={[
                           styles.selectionIndicator,
-                          { backgroundColor: pkg.color },
+                          { backgroundColor:  pkg.color },
                         ]}
                       >
                         <MaterialCommunityIcons
@@ -344,7 +393,7 @@ export default function PackagesScreen({
           >
             <View
               style={[
-                styles.checkbox,
+                styles. checkbox,
                 acceptPolicy && styles.checkboxChecked,
               ]}
             >
@@ -411,37 +460,37 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#fff',
     padding: 24,
-    ...Platform.select({
+    ... Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOpacity:  0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 4 },
+      android:  { elevation: 4 },
     }),
   },
   header: { alignItems: 'center', marginBottom: 24, gap: 12 },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: 'Almarai-Bold',
     color: '#1a1a1a',
     textAlign: 'center',
   },
   form: { gap: 16 },
   subscriptionSection: { marginTop: 8, gap: 16 },
-  subscriptionHeader: {
+  subscriptionHeader:  {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
   },
   subscriptionSectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Almarai-Bold',
     color: '#1a1a1a',
   },
-  durationToggle: {
+  durationToggle:  {
     flexDirection: 'row-reverse',
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
@@ -454,7 +503,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent:  'center',
     position: 'relative',
   },
   durationButtonActive: { backgroundColor: '#FF9800' },
@@ -470,8 +519,8 @@ const styles = StyleSheet.create({
     right: -6,
     backgroundColor: '#4CAF50',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingVertical:  2,
+    borderRadius:  6,
   },
   saveBadgeText: {
     fontSize: 9,
@@ -499,7 +548,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 1,
   },
-  popularBadgeText: {
+  popularBadgeText:  {
     fontSize: 10,
     fontFamily: 'Almarai-Bold',
     color: '#fff',
@@ -523,15 +572,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  packageInfo: { gap: 4 },
+  packageInfo:  { gap: 4 },
   packageName: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Almarai-Bold',
     color: '#1a1a1a',
     textAlign: 'right',
   },
   packageNameEn: {
-    fontSize: 13,
+    fontSize:  13,
     fontFamily: 'Almarai-Regular',
     color: '#666',
     textAlign: 'right',
@@ -552,8 +601,8 @@ const styles = StyleSheet.create({
   },
   packageFeatureText: {
     flex: 1,
-    fontSize: 13,
-    fontFamily: 'Almarai-Regular',
+    fontSize:  13,
+    fontFamily:  'Almarai-Regular',
     color: '#333',
     textAlign: 'right',
     lineHeight: 20,
@@ -574,26 +623,26 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 8,
   },
-  checkbox: {
+  checkbox:  {
     width: 24,
     height: 24,
     borderWidth: 2,
     borderColor: '#FF9800',
-    borderRadius: 6,
+    borderRadius:  6,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent:  'center',
     backgroundColor: '#fff',
   },
   checkboxChecked: { backgroundColor: '#FF9800' },
   policyText: {
     flex: 1,
-    fontSize: 14,
+    fontSize:  14,
     fontFamily: 'Almarai-Regular',
     color: '#555',
     textAlign: 'right',
   },
   policyLink: {
-    color: '#FF9800',
+    color:  '#FF9800',
     fontFamily: 'Almarai-Bold',
     textDecorationLine: 'underline',
   },
@@ -609,7 +658,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Almarai-Bold',
     color: '#fff',
   },
@@ -617,7 +666,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#FF9800',
-    borderRadius: 12,
+    borderRadius:  12,
     paddingVertical: 14,
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -625,8 +674,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backButtonText: {
-    fontSize: 14,
-    fontFamily: 'Almarai-Bold',
+    fontSize:  14,
+    fontFamily:  'Almarai-Bold',
     color: '#FF9800',
   },
 });

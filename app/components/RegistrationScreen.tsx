@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     headerTitle: {
-        fontSize: 22,
+        fontSize: 18,
         fontFamily: 'Almarai-Bold',
         color: '#1a1a1a',
         textAlign: 'center',
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Regular',
         color: '#1a1a1a',
         paddingVertical: 12,
@@ -617,14 +617,14 @@ const styles = StyleSheet.create({
     },
     mobileInput: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Regular',
         color:  '#1a1a1a',
         paddingVertical: 12,
         textAlign: 'right',
     },
     mobilePrefix: {
-        fontSize:  16,
+        fontSize:  14,
         fontFamily: 'Almarai-Bold',
         color: '#666',
         marginRight: 8,
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     },
     passwordInput: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Regular',
         color: '#1a1a1a',
         paddingVertical: 12,
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     },
     dropdownText: {
         flex: 1,
-        fontSize:  16,
+        fontSize:  14,
         fontFamily:  'Almarai-Regular',
         color: '#1a1a1a',
         textAlign: 'right',
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     submitButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#fff',
     },
