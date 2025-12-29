@@ -170,10 +170,10 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
     );
   };
 
-  const handleLogout = async () => {
-    await storage.removeItem('currentUser');
-    navigation?.reset?.({ index: 0, routes: [{ name: 'Login' }] });
-  };
+    const handleLogout = async () => {
+      await storage.clear();
+      navigation?.reset?.({ index: 0, routes: [{ name: 'Login' }] });
+    };
 
   if (loading)
     return (

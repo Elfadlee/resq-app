@@ -85,8 +85,13 @@ React.useEffect(() => {
             key={item.route}
             style={styles.item}
             onPress={() => {
-              onNavigate(item.route);
-              onClose();
+            if (item.route === 'contact') {
+            onNavigate('contact');
+          } else {
+            onNavigate(item.route);
+          }
+          onClose();
+
             }}
           >
             <List.Icon icon={item.icon} />

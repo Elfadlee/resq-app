@@ -13,6 +13,7 @@ import storage from '../services/storage-helper';
 import { db } from '../services/firestore';   // or ../services/firebase (depending on your file name)
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ContactScreen from './ContactScreen';
 
 const USERS_KEY = "allUsers";
 const CURRENT_USER_KEY = "currentUser";
@@ -36,7 +37,7 @@ const registerUser = async (user: any) => {
 };
 
 
-type CurrentScreen = 'login' | 'register' | 'packages' | 'profile' | 'editProfile' | 'upgradePackage';
+type CurrentScreen = 'login' | 'register' | 'packages' | 'profile' | 'editProfile' | 'upgradePackage'| 'contact';
 
 type User = {
   id?: string;
@@ -162,12 +163,12 @@ export default function ProfileScreen() {
       case 'editProfile':  
         return currentUser ? (
           <ProfileEdit
-            navigation={navigation}  // ✅ تمرير navigation
-            route={{                 // ✅ إنشاء route object كامل
+            navigation={navigation}  
+            route={{                 
               params: {
                 profile: currentUser,
                 onSave: async () => {
-                  await loadUser(); // إعادة تحميل البيانات
+                  await loadUser(); 
                 }
               }
             }}
@@ -213,6 +214,10 @@ export default function ProfileScreen() {
             }}
           />
         ) : null;
+        
+        case 'contact':
+        return <ContactScreen />;
+
 
       default:
         return null;

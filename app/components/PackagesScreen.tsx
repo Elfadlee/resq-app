@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import storage from '../services/storage-helper';
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -52,7 +52,7 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     id: 'pro',
     name: 'Pro',
     nameAr: 'احترافي',
-    icon:  'star',
+    icon: 'star',
     color: '#FF9800',
     monthlyPrice: 25,
     quarterlyPrice: 70,
@@ -68,7 +68,7 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     id: 'business',
     name: 'Business',
     nameAr: 'أعمال',
-    icon:  'crown',
+    icon: 'crown',
     color: '#9C27B0',
     monthlyPrice: 75,
     quarterlyPrice: 200,
@@ -87,11 +87,15 @@ export default function PackagesScreen({
   onConfirm,
   onBack,
 }: PackagesScreenProps) {
+
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] =
     useState<'monthly' | 'quarterly'>('monthly');
   const [acceptPolicy, setAcceptPolicy] = useState(false);
 
+  // ===========================
+  //  handleConfirm — (سليمة ومغلقة صح)
+  // ===========================
   const handleConfirm = async () => {
     Keyboard.dismiss();
 
@@ -100,46 +104,36 @@ export default function PackagesScreen({
       return;
     }
 
-    if (! acceptPolicy) {
+    if (!acceptPolicy) {
       Alert.alert('خطأ', 'يرجى الموافقة على سياسة الخصوصية');
       return;
     }
 
-    const pkg = SUBSCRIPTION_PACKAGES.find((p) => p.id === selectedPackage);
+    const pkg = SUBSCRIPTION_PACKAGES.find(p => p.id === selectedPackage);
     const price =
       selectedDuration === 'monthly'
         ? pkg?.monthlyPrice
         : pkg?.quarterlyPrice;
 
-    // ⏱ تواريخ الاشتراك
     const startAt = new Date();
     const endAt = new Date(startAt);
 
-    if (selectedDuration === 'monthly') {
-      endAt.setMonth(endAt.getMonth() + 1);
-    } else {
-      endAt.setMonth(endAt.getMonth() + 3);
-    }
+    selectedDuration === 'monthly'
+      ? endAt.setMonth(endAt.getMonth() + 1)
+      : endAt.setMonth(endAt.getMonth() + 3);
 
-    // 🎯 بناء هيكل الداتا النهائي
     const userData = {
       ...registrationData,
-
       subscription: {
         package: pkg?.id || "basic",
         packageName: pkg?.nameAr || "أساسي",
         duration: selectedDuration,
-        price: price || 0,
-        startAt:  startAt.toISOString(),
-        endAt: endAt. toISOString(),
+        price: price || 7,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
         isActive: true,
       },
-
-      status: {
-        approved: true,
-        suspended: false,
-      },
-
+      status: { approved: true, suspended: false },
       metadata: {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -148,58 +142,58 @@ export default function PackagesScreen({
     };
 
     try {
-      // 🟡 حفظ في Firestore
       const docRef = await addDoc(collection(db, "users"), userData);
 
-      // 🔵 بيانات كاملة مع الـ ID
+      await setDoc(
+        doc(db, "lookup_professions", registrationData.jobTitle),
+        { count: increment(1) },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, "lookup_areas", registrationData.area),
+        { count: increment(1) },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, "lookup_packages", userData.subscription.package),
+        { count: increment(1) },
+        { merge: true }
+      );
+
       const userDataWithId = {
-        id:  docRef.id,
-        ... registrationData,
-        subscription: {
-          package: pkg?. id || "basic",
-          packageName: pkg?.nameAr || "أساسي",
-          duration: selectedDuration,
-          price: price || 0,
-          startAt: startAt.toISOString(),
-          endAt: endAt.toISOString(),
-          isActive: true,
-        },
-        status: {
-          approved:  true,
-          suspended: false,
-        },
+        id: docRef.id,
+        ...registrationData,
+        subscription: { ...userData.subscription },
+        status: userData.status,
         metadata: {
-          createdAt: startAt. toISOString(),
+          createdAt: startAt.toISOString(),
           updatedAt: startAt.toISOString(),
           lastLogin: startAt.toISOString(),
         },
       };
 
-      // 🔵 حفظ في Storage - userProfile
       await storage.setObject("userProfile", userDataWithId);
-
-      // 🔵 حفظ في Storage - currentUser
       await storage.setObject("currentUser", userDataWithId);
 
-      // 🔵 إضافة إلى قائمة allUsers
-      try {
-        const allUsers = await storage.getObject<any[]>('allUsers') || [];
-        allUsers.push(userDataWithId);
-        await storage.setObject('allUsers', allUsers);
-      } catch (e) {
-        console.log("Error updating allUsers:", e);
-      }
+      const allUsers = (await storage.getObject<any[]>('allUsers')) || [];
+      allUsers.push(userDataWithId);
+      await storage.setObject("allUsers", allUsers);
 
-      // 🚀 إرسال البيانات للخطوة التالية
       onConfirm(userDataWithId);
 
-      Alert.alert("👍 تم التسجيل", "تم إنشاء حسابك وحفظ البيانات بنجاح");
+      Alert.alert("👍 تم التسجيل", "تم إنشاء حسابك بنجاح");
 
     } catch (error) {
       console.log("Firestore error:", error);
       Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
     }
   };
+
+
+
+
 
   return (
     <ScrollView
@@ -679,3 +673,4 @@ const styles = StyleSheet.create({
     color: '#FF9800',
   },
 });
+

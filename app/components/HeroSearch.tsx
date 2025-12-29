@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Animated,
   Dimensions,
@@ -18,39 +18,8 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import theme from '../theme/theme';
-
-const JOBS = [
-  'كهربائي',
-  'سباك',
-  'نجار',
-  'دهان',
-  'حداد',
-  'فني تكييف',
-  'فني تبريد',
-  'فني غسالات',
-  'فني ثلاجات',
-  'فني سخانات',
-  'مبلّط',
-  'عامل بناء',
-  'فني ألمنيوم',
-  'فني زجاج',
-  'فني جبس بورد',
-  'فني سيراميك',
-  'دهان سيارات',
-  'ميكانيكي سيارات',
-  'كهربائي سيارات',
-  'فني بطاريات',
-  'سمكري',
-  'منظف منازل',
-  'عامل نقل أثاث',
-  'فني ستالايت',
-  'فني كاميرات مراقبة',
-  'فني إنتركم',
-  'فني شبكات',
-  'فني إنترنت',
-];
-
-const AREAS = ['الحله', 'بغداد', 'النجف', 'كربلاء'];
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "../services/firestore"; // تأكد من هذه الاستيراد حسب مشروعك
 
 const { width } = Dimensions.get('window');
 
@@ -62,10 +31,43 @@ export default function HeroSearch({
   const [jobOpen, setJobOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
 
+  const [jobs, setJobs] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+
   const [job, setJob] = useState<string | null>(null);
   const [area, setArea] = useState<string | null>(null);
 
-  // 🔥 نفس الأنيميشن الموجود في test.tsx
+  // =============== قراءة الداتا من Firestore ===============
+  useEffect(() => {
+    loadJobsAndAreas();
+  }, []);
+
+  const loadJobsAndAreas = async () => {
+    try {
+      // جلب المناطق
+      const areasSnap = await getDocs(collection(db, "lookup_areas"));
+      const areasList: string[] = [];
+      areasSnap.forEach((doc) => {
+        areasList.push(doc.id); // اسم المنطقة هو doc.id
+      });
+
+      // جلب المهن
+      const jobsSnap = await getDocs(collection(db, "lookup_professions"));
+      const jobsList: string[] = [];
+      jobsSnap.forEach((doc) => {
+        jobsList.push(doc.id);
+      });
+
+      setJobs(jobsList);
+      setAreas(areasList);
+    } catch (e) {
+      setJobs([]);
+      setAreas([]);
+      console.error("Firestore read error:", e);
+    }
+  };
+
+  // =============== تحكم الأنيميشن ===============
   const overlayAnim = React.useRef(new Animated.Value(0)).current;
 
   const openSheet = () => {
@@ -92,7 +94,7 @@ export default function HeroSearch({
 
   return (
     <>
-      {/* ================= HERO (لم يتغير مطلقًا) ================= */}
+      {/* ================= HERO (الواجهة والتصميم كما هو) ================= */}
       <View style={styles.heroWrapper}>
         <Card style={styles.card}>
           <View style={styles.iconContainer}>
@@ -154,7 +156,7 @@ export default function HeroSearch({
         </Card>
       </View>
 
-      {/* ================= BOTTOM SHEET (نفس test.tsx حرفيًا) ================= */}
+      {/* ================= BOTTOM SHEET (بدون تغيير) ================= */}
       <Portal>
         {(jobOpen || areaOpen) && (
           <Animated.View
@@ -182,29 +184,25 @@ export default function HeroSearch({
               }}
             >
               <Card style={styles.menuCard}>
-  <Text style={styles.sheetTitle}>
-    {jobOpen ? 'اختر المهنة' : 'اختر المنطقة'}
-  </Text>
-
-  {/* 👇 هنا تضيف ScrollView */}
-  <ScrollView style={{ maxHeight: 260 }}>
-    {(jobOpen ? JOBS : AREAS).map(item => (
-      <TouchableOpacity
-        key={item}
-        onPress={() =>
-          closeSheet(() => {
-            jobOpen ? setJob(item) : setArea(item);
-          })
-        }
-        style={styles.menuItem}
-      >
-        <Text style={styles.menuText}>{item}</Text>
-      </TouchableOpacity>
-    ))}
-  </ScrollView>
-  {/* 👆 انتهى */}
-</Card>
-
+                <Text style={styles.sheetTitle}>
+                  {jobOpen ? 'اختر المهنة' : 'اختر المنطقة'}
+                </Text>
+                <ScrollView style={{ maxHeight: 260 }}>
+                  {(jobOpen ? jobs : areas).map(item => (
+                    <TouchableOpacity
+                      key={item}
+                      onPress={() =>
+                        closeSheet(() => {
+                          jobOpen ? setJob(item) : setArea(item);
+                        })
+                      }
+                      style={styles.menuItem}
+                    >
+                      <Text style={styles.menuText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </Card>
             </Animated.View>
           </Animated.View>
         )}
@@ -219,19 +217,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 16,
   },
-
   card: {
     borderRadius: 16,
     padding: 16,
     backgroundColor: '#FFFFFF',
     elevation: 4,
   },
-
   iconContainer: {
     alignItems: 'center',
     marginBottom: 10,
   },
-
   iconBadge: {
     width: 50,
     height: 50,
@@ -240,7 +235,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   title: {
     fontSize: 18,
     fontWeight: '800',
@@ -248,7 +242,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'Almarai-Bold',
   },
-
   subtitle: {
     fontSize: 12,
     color: '#666',
@@ -256,11 +249,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     fontFamily: 'Almarai-Regular',
   },
-
   inputsContainer: {
     marginBottom: 16,
   },
-
   inputBox: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -273,38 +264,31 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
     marginBottom: 10,
   },
-
   inputContent: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
-
   inputTextPlaceholder: {
     fontSize: 13,
     color: '#999',
     fontFamily: 'Almarai-Regular',
   },
-
   inputTextSelected: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Almarai-Bold',
   },
-
   button: {
     borderRadius: 10,
     backgroundColor: '#25D366',
   },
-
   buttonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'Almarai-Bold',
   },
-
-  /* ===== Bottom Sheet styles (من test.tsx) ===== */
   overlay: {
     position: 'absolute',
     top: 0,
@@ -314,12 +298,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
-
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
-
   menuCard: {
     width: width,
     borderTopLeftRadius: 22,
@@ -328,7 +310,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     elevation: 4,
   },
-
   sheetTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -337,14 +318,12 @@ const styles = StyleSheet.create({
     color: '#25D366',
     fontFamily: 'Almarai-Bold',
   },
-
   menuItem: {
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
   },
-
   menuText: {
     fontSize: 14,
     fontFamily: 'Almarai-Regular',
