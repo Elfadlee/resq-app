@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 import AdvertisementBanner from '../components/AdvertisementBanner';
 import AppDrawer from '../components/AppDrawer';
@@ -9,16 +10,17 @@ import AppHeader from '../components/AppHeader';
 import HeroSearch from '../components/HeroSearch';
 import ServiceCard from '../components/ServiceCard';
 import ContactScreen from '../screens/ContactScreen';
-import ContactForm from '../components/ContactForm';
+
 
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "../services/firestore";
 
 export default function MainScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [scrollLocked, setScrollLocked] = useState(false); 
+  const [scrollLocked, setScrollLocked] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'contact'>('main');
   const [proUsers, setProUsers] = useState<any[]>([]);
+
 
   //MOKED DATA
   const SERVICES = [
@@ -90,13 +92,16 @@ export default function MainScreen() {
             <ScrollView
               contentContainerStyle={{ paddingBottom: 100 }}
               showsVerticalScrollIndicator={false}
-              scrollEnabled={!scrollLocked}  
+              scrollEnabled={!scrollLocked}
             >
               <AdvertisementBanner />
 
               <HeroSearch
                 onSearch={(job, area) => {
-                  console.log('SEARCH:', job, area);
+                  router.push({
+                    pathname: "/SearchResultsScreen",
+                    params: { jobTitle: job, area },
+                  });
                 }}
               />
 
@@ -112,8 +117,8 @@ export default function MainScreen() {
               ))}
             </ScrollView>
 
-            {/* FOOTER */}
-            <AppFooter />
+            {/* Pass required props to AppFooter */}
+            <AppFooter/>
           </>
         )}
 
@@ -123,9 +128,9 @@ export default function MainScreen() {
           onClose={() => setDrawerOpen(false)}
           onNavigate={(route) => {
             if (route === 'contact') {
-              setCurrentScreen('contact');  
+              setCurrentScreen('contact');
             } else {
-              setCurrentScreen(route as any); 
+              setCurrentScreen(route as any);
             }
             setDrawerOpen(false);
           }}

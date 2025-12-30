@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { View, StyleSheet, StatusBar, Image } from 'react-native';
-import { IconButton, Text, useTheme } from 'react-native-paper';
+import { View, StyleSheet, StatusBar, Image, Text } from 'react-native';  // لاحظ Text هنا فقط
+import { IconButton, useTheme } from 'react-native-paper';
 
 type Props = {
   onMenuOpen:  () => void;
@@ -13,42 +13,32 @@ export default function AppHeader({ onMenuOpen }: Props) {
     <>
       <StatusBar
         barStyle="light-content"
-        backgroundColor={theme. colors.primary}
+        backgroundColor={theme.colors.primary}
       />
 
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.colors. primary }, 
-        ]}
-      >
+      <View style={[
+        styles.container,
+        { backgroundColor: theme.colors.primary },
+      ]}>
         {/* MENU */}
         <IconButton
           icon="menu"
           size={26}
-          iconColor={theme.colors.onPrimary} 
+          iconColor={theme.colors.onPrimary}
           onPress={onMenuOpen}
         />
-           <Text
-            style={[
-              styles.title,
-              { color: theme.colors.onPrimary }, 
-            ]}
-          >
-            رزق
-          </Text>
+        <Text style={[styles.title, { color: theme.colors.onPrimary }]}>
+          رزق
+        </Text>
 
         {/* LOGO + TITLE */}
         <View style={styles.logoCircle}>
-           <Image
+          <Image
             source={require('../../assets/images/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-
-       
         </View>
-
         {/* BALANCE */}
         <View style={{ width: 48 }} />
       </View>
@@ -64,7 +54,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     overflow: 'hidden',
   },
-
   logoContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -74,30 +63,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingBottom: 10,
   },
-
-logoCircle: {
-  width: 56,
-  height: 56,
-  borderRadius: 28,
-  backgroundColor: '#fff',     
-  marginRight: 'auto',         
-  alignItems: 'center',
-  justifyContent: 'center',
-
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 8,
-},
-
-logo: {
-  width: 44,  
-  height: 44,
-},
-
-
-
+  logoCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+    marginRight: 'auto',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  logo: {
+    width: 44,
+    height: 44,
+  },
   title:  {
     textAlign: 'center',
     fontSize: 20,

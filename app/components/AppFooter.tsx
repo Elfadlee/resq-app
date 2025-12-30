@@ -5,17 +5,17 @@ import { BottomNavigation, useTheme } from 'react-native-paper';
 
 type Route = {
   key: string;
-  title: string;
+  title: string; // فقط نص عادي، ليس مكون JSX
   focusedIcon: string;
   unfocusedIcon: string;
-  path: string; // ✅ إضافة path
+  path: string;
 };
 
 const ROUTES: Route[] = [
   {
     key: 'profile',
     title: 'صفحتي',
-    focusedIcon:  'account',
+    focusedIcon: 'account',
     unfocusedIcon: 'account-outline',
     path: '/screens/ProfileScreen',
   },
@@ -46,9 +46,9 @@ const FOOTER_HEIGHT = Platform.OS === 'ios' ? 85 : 65;
 
 const AppFooter = () => {
   const theme = useTheme();
-  const pathname = usePathname(); // ✅ الحصول على المسار الحالي
+  const pathname = usePathname();
 
-  // ✅ تحديد الـ index بناءً على المسار الحالي
+  // تحديد الـ index بناءً على المسار الحالي
   const getCurrentIndex = () => {
     const currentRoute = ROUTES.findIndex(route => {
       if (route.path === '/') {
@@ -56,14 +56,15 @@ const AppFooter = () => {
       }
       return pathname.includes(route.path);
     });
-    return currentRoute >= 0 ? currentRoute : 3; // default to home
+    return currentRoute >= 0 ? currentRoute : 3;
   };
 
-  const [index, setIndex] = React. useState(getCurrentIndex());
+  const [index, setIndex] = React.useState(getCurrentIndex());
 
-  // ✅ تحديث الـ index عند تغيير المسار
+  // تحديث الـ index عند تغيير المسار
   React.useEffect(() => {
     setIndex(getCurrentIndex());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const handleIndexChange = (newIndex: number) => {
@@ -74,7 +75,7 @@ const AppFooter = () => {
 
     try {
       if (route.key === 'home') {
-        router.push('/'); // أو '/screens/MainScreen' إذا موجود
+        router.push('/');
         return;
       }
 
@@ -102,13 +103,21 @@ const AppFooter = () => {
       style={[
         styles.container,
         {
-          backgroundColor: theme.colors. primary,
+          backgroundColor: theme.colors.primary,
           height: FOOTER_HEIGHT,
         },
       ]}
     >
       <BottomNavigation
-        navigationState={{ index, routes: ROUTES }}
+        navigationState={{
+          index,
+          routes: ROUTES.map(route => ({
+            key: route.key,
+            title: route.title, // فقط string
+            focusedIcon: route.focusedIcon,
+            unfocusedIcon: route.unfocusedIcon,
+          })),
+        }}
         onIndexChange={handleIndexChange}
         renderScene={() => null}
         shifting={false}
@@ -123,15 +132,15 @@ const AppFooter = () => {
 
 const styles = StyleSheet.create({
   container: {
-    position:  'absolute',
-    bottom:  0,
+    position: 'absolute',
+    bottom: 0,
     left: 0,
     right: 0,
     height: FOOTER_HEIGHT,
     elevation: 12,
     paddingTop: 12,
     shadowColor: '#f59e0b',
-    shadowOffset:  { width: 0, height:  -4 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },

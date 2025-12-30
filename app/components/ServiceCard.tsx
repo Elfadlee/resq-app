@@ -1,6 +1,6 @@
 import React from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
-import { Card, IconButton, Text, useTheme, Surface } from 'react-native-paper';
+import { Linking, StyleSheet, View, Text } from 'react-native'; // <--- لاحظ الاستيراد هنا
+import { Card, IconButton, useTheme, Surface } from 'react-native-paper'; // <-- بدون Text هنا
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = {
@@ -23,7 +23,7 @@ export default function ServiceCard({
   const theme = useTheme();
 
   const openWhatsApp = () => {
-    const digits = phone. replace(/[^\d+]/g, '').replace(/^\+/, '');
+    const digits = phone.replace(/[^\d+]/g, '').replace(/^\+/, '');
     Linking.openURL(`https://wa.me/${digits}`).catch(() => {});
   };
 
@@ -40,7 +40,6 @@ export default function ServiceCard({
           <Text style={styles.name} numberOfLines={1}>
             {name}
           </Text>
-          
           <View style={styles.jobPill}>
             <Text style={styles.jobTitle} numberOfLines={1}>
               {jobTitle}
@@ -63,25 +62,22 @@ export default function ServiceCard({
           <View style={styles.infoRow}>
             <Icon name="map-marker" size={14} color="#6b7280" />
             <Text numberOfLines={1} style={styles.area}>
-                {area}
+              {area}
             </Text>
           </View>
 
-         <View style={styles.infoRow}>
-                    <Icon name="whatsapp" size={14} color="#25D366" />
-                    <Text
-                        numberOfLines={1}
-                        style={styles.phoneLink}
-                        onPress={openWhatsApp}
-                    >
-                        {phone}
-                    </Text>
-                    </View>
-
+          <View style={styles.infoRow}>
+            <Icon name="whatsapp" size={14} color="#25D366" />
+            <Text
+              numberOfLines={1}
+              style={styles.phoneLink}
+              onPress={openWhatsApp}
+            >
+              {phone}
+            </Text>
+          </View>
         </View>
-
         {/* LEFT – WHATSAPP */}
-     
       </Card.Content>
     </Card>
   );
@@ -93,15 +89,12 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 14,
   },
-
   content: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
-
-  /* RIGHT – NAME + JOB */
   rightSection:  {
     minWidth: 90,
     alignItems: 'center',
@@ -126,8 +119,6 @@ const styles = StyleSheet.create({
     color:  '#fff',
     textAlign:  'center',
   },
-
-  /* MIDDLE */
   middleSection: {
     flex:  1,
     marginHorizontal: 10,
@@ -139,46 +130,36 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginBottom: 4,
   },
-
   infoRow: {
     flexDirection:  'row-reverse',
     alignItems: 'center',
     marginBottom: 3,
     gap: 4,
   },
-
   area: {
     fontFamily: 'Almarai-Regular',
     fontSize:  11,
     color: '#6b7280',
     textAlign: 'right',
   },
-
   phone: {
     fontFamily: 'Almarai-Regular',
     fontSize:  11,
     fontWeight:  '600',
     textAlign:  'right',
   },
-
   phoneLink: {
     fontFamily: 'Almarai-Regular',
     fontSize:  11,
     fontWeight:  '600',
     textAlign:  'right',
-    // color: '#25D366',
     color: '#f59e0b',
-
-   
   },
-
-  /* LEFT – WHATSAPP */
   leftSection: {
     width: 36,
     alignItems: 'center',
   },
   whatsappSurface: {
-    // backgroundColor:  '#f59e0b',
     backgroundColor: '#25D366',
     borderRadius: 18,
     width: 36,
@@ -186,7 +167,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   iconBtn:  {
     margin: 0,
   },

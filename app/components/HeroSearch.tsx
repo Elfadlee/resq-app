@@ -10,24 +10,17 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import {
-  Button,
-  Card,
-  Portal,
-  Text,
-} from 'react-native-paper';
+import { Button, Card, Portal, Text } from 'react-native-paper';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import theme from '../theme/theme';
+
 import { getDocs, collection } from "firebase/firestore";
-import { db } from "../services/firestore"; // تأكد من هذه الاستيراد حسب مشروعك
+import { db } from "../services/firestore";
 
 const { width } = Dimensions.get('window');
 
-export default function HeroSearch({
-  onSearch,
-}: {
-  onSearch: (job: string, area: string) => void;
-}) {
+export default function HeroSearch({ onSearch }: { onSearch: (job: string, area: string) => void }) {
+
   const [jobOpen, setJobOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
 
@@ -37,37 +30,70 @@ export default function HeroSearch({
   const [job, setJob] = useState<string | null>(null);
   const [area, setArea] = useState<string | null>(null);
 
-  // =============== قراءة الداتا من Firestore ===============
+  const jobsByArea = React.useRef<Record<string,string[]>>({});
+  const areasByJob = React.useRef<Record<string,string[]>>({});
+
+  const [jobLocked, setJobLocked] = useState(false);
+  const [areaLocked, setAreaLocked] = useState(false);
+
+  // تحميل العلاقات من users
   useEffect(() => {
-    loadJobsAndAreas();
+    const loadRelations = async () => {
+      try {
+        const snap = await getDocs(collection(db, "users"));
+
+        const allJobs = new Set<string>();
+        const allAreas = new Set<string>();
+
+        const _jobsByArea: Record<string,string[]> = {};
+        const _areasByJob: Record<string,string[]> = {};
+
+        snap.forEach(doc => {
+          const u: any = doc.data();
+          if (!u.jobTitle || !u.area) return;
+
+          const j = u.jobTitle;
+          const a = u.area;
+
+          allJobs.add(j);
+          allAreas.add(a);
+
+          _jobsByArea[a] = Array.from(new Set([...( _jobsByArea[a] || [] ), j]));
+          _areasByJob[j] = Array.from(new Set([...( _areasByJob[j] || [] ), a]));
+        });
+
+        jobsByArea.current = _jobsByArea;
+        areasByJob.current = _areasByJob;
+
+        setJobs(Array.from(allJobs));
+        setAreas(Array.from(allAreas));
+
+      } catch (e) {
+        console.log("relation load error:", e);
+        setJobs([]);
+        setAreas([]);
+      }
+    };
+
+    loadRelations();
   }, []);
 
-  const loadJobsAndAreas = async () => {
-    try {
-      // جلب المناطق
-      const areasSnap = await getDocs(collection(db, "lookup_areas"));
-      const areasList: string[] = [];
-      areasSnap.forEach((doc) => {
-        areasList.push(doc.id); // اسم المنطقة هو doc.id
-      });
-
-      // جلب المهن
-      const jobsSnap = await getDocs(collection(db, "lookup_professions"));
-      const jobsList: string[] = [];
-      jobsSnap.forEach((doc) => {
-        jobsList.push(doc.id);
-      });
-
-      setJobs(jobsList);
-      setAreas(areasList);
-    } catch (e) {
-      setJobs([]);
-      setAreas([]);
-      console.error("Firestore read error:", e);
+  // تحديث القوائم حسب الاختيار
+  useEffect(() => {
+    if (area && jobsByArea.current[area]) {
+      setJobs(jobsByArea.current[area]);
+    } else {
+      setJobs(Object.keys(areasByJob.current));
     }
-  };
 
-  // =============== تحكم الأنيميشن ===============
+    if (job && areasByJob.current[job]) {
+      setAreas(areasByJob.current[job]);
+    } else {
+      setAreas(Object.keys(jobsByArea.current));
+    }
+  }, [job, area]);
+
+  // الأنيميشن
   const overlayAnim = React.useRef(new Animated.Value(0)).current;
 
   const openSheet = () => {
@@ -94,7 +120,6 @@ export default function HeroSearch({
 
   return (
     <>
-      {/* ================= HERO (الواجهة والتصميم كما هو) ================= */}
       <View style={styles.heroWrapper}>
         <Card style={styles.card}>
           <View style={styles.iconContainer}>
@@ -107,93 +132,118 @@ export default function HeroSearch({
           <Text style={styles.subtitle}>اختر المهنة والمنطقة للبدء</Text>
 
           <View style={styles.inputsContainer}>
-            <TouchableOpacity
-              style={styles.inputBox}
-              onPress={() => {
-                setJobOpen(true);
-                setAreaOpen(false);
-                openSheet();
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.inputContent}>
-                <Icon name="briefcase-outline" size={18} color={theme.colors.primary} />
-                <Text style={job ? styles.inputTextSelected : styles.inputTextPlaceholder}>
-                  {job ?? 'اختر المهنة'}
-                </Text>
-              </View>
-              <Icon name="chevron-down" size={18} color="#999" />
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.inputBox}
-              onPress={() => {
-                setAreaOpen(true);
-                setJobOpen(false);
-                openSheet();
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.inputContent}>
-                <Icon name="map-marker-outline" size={18} color={theme.colors.primary} />
-                <Text style={area ? styles.inputTextSelected : styles.inputTextPlaceholder}>
-                  {area ?? 'اختر المنطقة'}
-                </Text>
-              </View>
-              <Icon name="chevron-down" size={18} color="#999" />
-            </TouchableOpacity>
+            {/* المهنة */}
+            <View style={styles.inputBox}>
+              <TouchableOpacity
+                style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center' }}
+                onPress={() => {
+                  if (jobLocked) return;
+                  setJobOpen(true);
+                  setAreaOpen(false);
+                  openSheet();
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.inputContent}>
+                  <Icon name="briefcase-outline" size={18} color={theme.colors.primary} />
+                  <Text style={job ? styles.inputTextSelected : styles.inputTextPlaceholder}>
+                    {job ?? 'اختر المهنة'}
+                  </Text>
+                </View>
+                <Icon name="chevron-down" size={18} color="#999" />
+              </TouchableOpacity>
+              {job && jobLocked && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setJob(null);
+                    setJobLocked(false);
+                    setJobs(Object.keys(areasByJob.current));
+                  }}
+                  style={styles.clearIcon}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close-circle" size={20} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* المنطقة */}
+            <View style={styles.inputBox}>
+              <TouchableOpacity
+                style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center' }}
+                onPress={() => {
+                  if (areaLocked) return;
+                  setAreaOpen(true);
+                  setJobOpen(false);
+                  openSheet();
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.inputContent}>
+                  <Icon name="map-marker-outline" size={18} color={theme.colors.primary} />
+                  <Text style={area ? styles.inputTextSelected : styles.inputTextPlaceholder}>
+                    {area ?? 'اختر المنطقة'}
+                  </Text>
+                </View>
+                <Icon name="chevron-down" size={18} color="#999" />
+              </TouchableOpacity>
+              {area && areaLocked && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setArea(null);
+                    setAreaLocked(false);
+                    setAreas(Object.keys(jobsByArea.current));
+                  }}
+                  style={styles.clearIcon}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close-circle" size={20} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
-          <Button
-            mode="contained"
-            onPress={() => onSearch(job!, area!)}
-            disabled={!job || !area}
-            style={styles.button}
-            labelStyle={styles.buttonText}
-          >
-            ابدأ البحث
-          </Button>
+        <Button
+          mode="contained"
+          onPress={() => onSearch(job ?? "", area ?? "")}
+          disabled={!job && !area}
+          style={styles.button}
+          labelStyle={styles.buttonText}
+        >
+          <Text style={styles.buttonText}>ابدأ البحث</Text>
+        </Button>
         </Card>
       </View>
 
-      {/* ================= BOTTOM SHEET (بدون تغيير) ================= */}
       <Portal>
         {(jobOpen || areaOpen) && (
-          <Animated.View
-            style={[
-              styles.overlay,
-              {
-                opacity: overlayAnim,
-              },
-            ]}
-          >
+          <Animated.View style={[styles.overlay,{ opacity: overlayAnim }]}>
             <TouchableWithoutFeedback onPress={() => closeSheet()}>
               <View style={styles.backdrop} />
             </TouchableWithoutFeedback>
 
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    translateY: overlayAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [300, 0],
-                    }),
-                  },
-                ],
-              }}
-            >
+            <Animated.View style={{
+              transform:[{ translateY: overlayAnim.interpolate({ inputRange:[0,1], outputRange:[300,0] }) }]
+            }}>
               <Card style={styles.menuCard}>
                 <Text style={styles.sheetTitle}>
                   {jobOpen ? 'اختر المهنة' : 'اختر المنطقة'}
                 </Text>
+
                 <ScrollView style={{ maxHeight: 260 }}>
                   {(jobOpen ? jobs : areas).map(item => (
                     <TouchableOpacity
                       key={item}
                       onPress={() =>
                         closeSheet(() => {
-                          jobOpen ? setJob(item) : setArea(item);
+                          if (jobOpen) {
+                            setJob(item);
+                            setJobLocked(true);
+                          } else {
+                            setArea(item);
+                            setAreaLocked(true);
+                          }
                         })
                       }
                       style={styles.menuItem}
@@ -263,6 +313,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     marginBottom: 10,
+    minHeight: 48,
   },
   inputContent: {
     flexDirection: 'row-reverse',
@@ -279,6 +330,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Almarai-Bold',
   },
+  clearIcon: {
+    marginLeft: 4,
+    marginRight: 4,
+    alignSelf: 'center',
+  },
   button: {
     borderRadius: 10,
     backgroundColor: '#25D366',
@@ -288,6 +344,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'Almarai-Bold',
+    textAlign: "center"
   },
   overlay: {
     position: 'absolute',
