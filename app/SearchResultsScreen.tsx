@@ -10,15 +10,22 @@ import ServiceCard from './components/ServiceCard';
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "./services/firestore";
 
+// دالة تساعدك تضمن القيمة سترينج دائماً
+function safeString(val: any) {
+  if (typeof val === "string") return val;
+  if (typeof val === "number") return String(val);
+  return '';
+}
+
 // نفس نوع البيانات
 type User = {
   id: string;
-  name: string;
-  jobTitle: string;
-  area: string;
-  description?: string;
-  phone?: string;
-  mobile?: string;
+  name: any;
+  jobTitle: any;
+  area: any;
+  description?: any;
+  phone?: any;
+  mobile?: any;
   subscription?: {
     package?: 'basic' | 'pro' | 'business';
     packageName?: string;
@@ -33,13 +40,24 @@ type User = {
 export default function SearchResultsScreen() {
   const params = useLocalSearchParams();
 
-  const jobTitle = Array.isArray(params.jobTitle)
-    ? params.jobTitle[0]
-    : params.jobTitle ?? "";
+  // إصلاح حساس جداً! لكي تتعامل مع جميع أنواع params
+  const jobTitle =
+    typeof params.jobTitle === "string"
+      ? params.jobTitle
+      : (Array.isArray(params.jobTitle) && typeof params.jobTitle[0] === "string"
+        ? params.jobTitle[0]
+        : "");
 
-  const area = Array.isArray(params.area)
-    ? params.area[0]
-    : params.area ?? "";
+  const area =
+    typeof params.area === "string"
+      ? params.area
+      : (Array.isArray(params.area) && typeof params.area[0] === "string"
+        ? params.area[0]
+        : "");
+
+  // أمان زائد لضمان أنها سترينج
+  const jobTitleSafe = safeString(jobTitle);
+  const areaSafe = safeString(area);
 
   const [results, setResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +65,7 @@ export default function SearchResultsScreen() {
   useEffect(() => {
     loadResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobTitle, area]);
+  }, [jobTitleSafe, areaSafe]);
 
   const loadResults = async () => {
     try {
@@ -56,24 +74,24 @@ export default function SearchResultsScreen() {
       snap.forEach(doc => users.push({ id: doc.id, ...doc.data() } as any));
 
       const normalize = (v?: string) =>
-        (v ?? "").replace(/\s+/g, ' ').trim().toLowerCase();
+        (safeString(v) ?? "").replace(/\s+/g, ' ').trim().toLowerCase();
 
       const paramsAreEmpty =
-        (!jobTitle || normalize(jobTitle) === "") &&
-        (!area || normalize(area) === "");
+        (!jobTitleSafe || normalize(jobTitleSafe) === "") &&
+        (!areaSafe || normalize(areaSafe) === "");
 
       const filtered = paramsAreEmpty
         ? users
         : users.filter(u =>
-            (!jobTitle || normalize(u.jobTitle).includes(normalize(jobTitle))) &&
-            (!area || normalize(u.area).includes(normalize(area)))
+            (!jobTitleSafe || normalize(u.jobTitle).includes(normalize(jobTitleSafe))) &&
+            (!areaSafe || normalize(u.area).includes(normalize(areaSafe)))
           );
 
       // ترتيب حسب الباقة
       const order = { business: 0, pro: 1, basic: 2 };
       const sorted = filtered.sort((a, b) => {
-        const pa = a.subscription?.package ?? 'basic';
-        const pb = b.subscription?.package ?? 'basic';
+        const pa = safeString(a.subscription?.package) || 'basic';
+        const pb = safeString(b.subscription?.package) || 'basic';
         return (order[pa] ?? 3) - (order[pb] ?? 3);
       });
 
@@ -88,11 +106,15 @@ export default function SearchResultsScreen() {
   const renderItem = ({ item }: { item: User }) => (
     <View style={styles.resultCard}>
       <ServiceCard
-        name={item.name ?? ''}
-        jobTitle={item.jobTitle ?? ''}
-        description={item.description ?? ''}
-        phone={item.phone ?? item.mobile ?? ''}
-        area={item.area ?? ''}
+        name={safeString(item.name)}
+        jobTitle={safeString(item.jobTitle)}
+        description={safeString(item.description)}
+        phone={
+          item.phone
+            ? safeString(item.phone)
+            : (item.mobile ? safeString(item.mobile) : "")
+        }
+        area={safeString(item.area)}
       />
     </View>
   );
@@ -102,15 +124,15 @@ export default function SearchResultsScreen() {
       <AppHeader onMenuOpen={() => { /* handle menu open here */ }} />
       <View style={styles.wrap}>
         <View style={styles.headerBox}>
-          <Icon name="account-search" color="#25D366" size={26} /> {/* لون واتساب */}
+          <Icon name="account-search" color="#25D366" size={26} />
           <Text style={styles.pageTitle}>
             نتائج البحث
           </Text>
-          {(jobTitle || area) ? (
+          {(jobTitleSafe || areaSafe) ? (
             <Text style={styles.subTitle}>
-              {jobTitle ? `المهنة: ${jobTitle}` : ''}
-              {jobTitle && area ? ' - ' : ''}
-              {area ? `المنطقة: ${area}` : ''}
+              {jobTitleSafe ? `المهنة: ${jobTitleSafe}` : ''}
+              {jobTitleSafe && areaSafe ? ' - ' : ''}
+              {areaSafe ? `المنطقة: ${areaSafe}` : ''}
             </Text>
           ) : null}
         </View>
@@ -131,14 +153,14 @@ export default function SearchResultsScreen() {
         ) : (
           <FlatList
             data={results}
-            keyExtractor={item => item.id}
+            keyExtractor={item => safeString(item.id)}
             renderItem={renderItem}
             contentContainerStyle={{ paddingBottom: 80 }}
             showsVerticalScrollIndicator={false}
           />
         )}
       </View>
-      <AppFooter/>
+      <AppFooter />
     </SafeAreaView>
   );
 }

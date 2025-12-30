@@ -1,6 +1,6 @@
 import React from 'react';
-import { Linking, StyleSheet, View, Text } from 'react-native'; // <--- لاحظ الاستيراد هنا
-import { Card, IconButton, useTheme, Surface } from 'react-native-paper'; // <-- بدون Text هنا
+import { Linking, StyleSheet, View, Text } from 'react-native';
+import { Card, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = {
@@ -23,8 +23,10 @@ export default function ServiceCard({
   const theme = useTheme();
 
   const openWhatsApp = () => {
-    const digits = phone.replace(/[^\d+]/g, '').replace(/^\+/, '');
-    Linking.openURL(`https://wa.me/${digits}`).catch(() => {});
+    const digits = String(phone ?? '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+    if (digits.length > 0) {
+      Linking.openURL(`https://wa.me/${digits}`).catch(() => {});
+    }
   };
 
   return (
@@ -38,11 +40,11 @@ export default function ServiceCard({
         {/* RIGHT – NAME + JOB */}
         <View style={styles.rightSection}>
           <Text style={styles.name} numberOfLines={1}>
-            {name}
+            {name ? String(name) : ''}
           </Text>
           <View style={styles.jobPill}>
             <Text style={styles.jobTitle} numberOfLines={1}>
-              {jobTitle}
+              {jobTitle ? String(jobTitle) : ''}
             </Text>
           </View>
         </View>
@@ -56,13 +58,13 @@ export default function ServiceCard({
               { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            {description}
+            {description ? String(description) : ''}
           </Text>
 
           <View style={styles.infoRow}>
             <Icon name="map-marker" size={14} color="#6b7280" />
             <Text numberOfLines={1} style={styles.area}>
-              {area}
+              {area ? String(area) : ''}
             </Text>
           </View>
 
@@ -73,7 +75,7 @@ export default function ServiceCard({
               style={styles.phoneLink}
               onPress={openWhatsApp}
             >
-              {phone}
+              {phone ? String(phone) : ''}
             </Text>
           </View>
         </View>
@@ -85,7 +87,7 @@ export default function ServiceCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal:  16,
+    marginHorizontal: 16,
     marginVertical: 6,
     borderRadius: 14,
   },
@@ -95,10 +97,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
-  rightSection:  {
+  rightSection: {
     minWidth: 90,
     alignItems: 'center',
-    justifyContent:  'center',
+    justifyContent: 'center',
     gap: 4,
   },
   name: {
@@ -116,11 +118,11 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontFamily: 'Almarai-Bold',
     fontSize: 12,
-    color:  '#fff',
-    textAlign:  'center',
+    color: '#fff',
+    textAlign: 'center',
   },
   middleSection: {
-    flex:  1,
+    flex: 1,
     marginHorizontal: 10,
   },
   description: {
@@ -131,28 +133,28 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoRow: {
-    flexDirection:  'row-reverse',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     marginBottom: 3,
     gap: 4,
   },
   area: {
     fontFamily: 'Almarai-Regular',
-    fontSize:  11,
+    fontSize: 11,
     color: '#6b7280',
     textAlign: 'right',
   },
   phone: {
     fontFamily: 'Almarai-Regular',
-    fontSize:  11,
-    fontWeight:  '600',
-    textAlign:  'right',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'right',
   },
   phoneLink: {
     fontFamily: 'Almarai-Regular',
-    fontSize:  11,
-    fontWeight:  '600',
-    textAlign:  'right',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'right',
     color: '#f59e0b',
   },
   leftSection: {
@@ -167,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBtn:  {
+  iconBtn: {
     margin: 0,
   },
 });
