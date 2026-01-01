@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, StyleSheet, StatusBar, Image, Text } from 'react-native';  // لاحظ Text هنا فقط
 import { IconButton, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = {
   onMenuOpen:  () => void;
@@ -15,6 +16,7 @@ export default function AppHeader({ onMenuOpen }: Props) {
         barStyle="light-content"
         backgroundColor={theme.colors.primary}
       />
+      
 
       <View style={[
         styles.container,
@@ -53,6 +55,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     overflow: 'hidden',
+    width: '100%',
   },
   logoContainer: {
     flex: 1,

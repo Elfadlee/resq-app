@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
     Keyboard,
@@ -13,6 +12,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
+import GoogleLoginButton from './GoogleLoginButton';
+import AppleLoginButton from './AppleLoginButton';
 
 type LoginScreenProps = {
     onLogin: (mobile: string, password: string, rememberMe: boolean) => void;
@@ -44,7 +46,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
-    
+
     const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
     const [resetEmail, setResetEmail] = useState('');
     const [sendingReset, setSendingReset] = useState(false);
@@ -70,13 +72,13 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
         if (showPassword) {
             return password;
         }
-        return '•'. repeat(password.length);
+        return '•'.repeat(password.length);
     };
 
     const handleLogin = () => {
         Keyboard.dismiss();
 
-        if (! mobile. trim() || mobile.length < 10) {
+        if (!mobile.trim() || mobile.length < 10) {
             Alert.alert('خطأ', 'يرجى إدخال رقم جوال صحيح (10 أرقام)');
             return;
         }
@@ -102,11 +104,9 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
 
         try {
             await new Promise(resolve => setTimeout(resolve, 2000));
-
             setSendingReset(false);
             setForgotPasswordVisible(false);
             setResetEmail('');
-
             Alert.alert(
                 'تم الإرسال',
                 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
@@ -125,7 +125,21 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <View style={styles. formCard}>
+                <View style={styles.formCard}>
+
+                    {/* === فقط على الموبايل: أزرار Google/Apple بشكل مرتب أعلى الفورم === */}
+                    {Platform.OS !== "web" && (
+                        <View style={{ marginBottom: 16 }}>
+                            {Platform.OS === "ios" && (
+                                <AppleLoginButton onLogin={onLogin} />
+                            )}
+                            {Platform.OS === "android" && (
+                                <GoogleLoginButton onLogin={onLogin} />
+                            )}
+                            <Text style={{ textAlign: "center", marginVertical: 8, color: '#aaa' }}>أو</Text>
+                        </View>
+                    )}
+
                     <View style={styles.header}>
                         <MaterialCommunityIcons name="login" size={50} color="#FF9800" />
                         <Text style={styles.headerTitle}>تسجيل الدخول</Text>
@@ -166,11 +180,11 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                         </View>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles. label}>كلمة المرور</Text>
+                            <Text style={styles.label}>كلمة المرور</Text>
                             <View
                                 style={[
                                     styles.inputWrapper,
-                                    focusedField === 'password' && styles. inputWrapperFocused,
+                                    focusedField === 'password' && styles.inputWrapperFocused,
                                 ]}
                             >
                                 <View style={styles.passwordInputContainer}>
@@ -180,7 +194,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                                         activeOpacity={0.7}
                                     >
                                         <MaterialCommunityIcons
-                                            name={showPassword ? 'eye-off' :  'eye'}
+                                            name={showPassword ? 'eye-off' : 'eye'}
                                             size={20}
                                             color="#666"
                                         />
@@ -202,9 +216,8 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                                 </View>
                                 <MaterialCommunityIcons name="lock" size={20} color="#FF9800" style={styles.icon} />
                             </View>
-                            <Text style={styles. helperText}>{password.length}/12 • استخدم الأرقام فقط</Text>
-                            
-                            {/* ✅ نسيت كلمة المرور هنا تحت */}
+                            <Text style={styles.helperText}>{password.length}/12 • استخدم الأرقام فقط</Text>
+
                             <TouchableOpacity
                                 onPress={() => setForgotPasswordVisible(true)}
                                 activeOpacity={0.7}
@@ -248,7 +261,6 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                 </View>
             </ScrollView>
 
-            {/* Modal */}
             <Modal
                 visible={forgotPasswordVisible}
                 transparent
@@ -281,7 +293,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     textAlign="right"
-                                    editable={! sendingReset}
+                                    editable={!sendingReset}
                                 />
                                 <MaterialCommunityIcons name="email" size={20} color="#FF9800" />
                             </View>
@@ -318,276 +330,248 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
     );
 }
 
+// لاحظ: styles كما هو من كودك الأصلي (لا تحرك مكان الفيلدات الحقيقية)
+
 const styles = StyleSheet.create({
     loginContainer: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#fff',
     },
     loginScrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
-        padding: 16,
+        padding: 24,
     },
     formCard: {
-        margin: 16,
-        borderRadius: 20,
         backgroundColor: '#fff',
+        borderRadius: 16,
         padding: 24,
-        ... Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity:  0.1,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     header: {
         alignItems: 'center',
         marginBottom: 24,
-        gap: 12,
     },
     headerTitle: {
-        fontSize: 18,
-        fontFamily: 'Almarai-Bold',
-        color: '#1a1a1a',
-        textAlign: 'center',
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#FF9800',
+        marginTop: 8,
     },
     loginSubtitle: {
-        fontSize: 12,
-        fontFamily: 'Almarai-Regular',
+        fontSize: 16,
         color: '#666',
+        marginTop: 4,
         textAlign: 'center',
-        marginTop:  8,
     },
     form: {
-        gap: 16,
+        marginTop: 8,
     },
     inputContainer: {
-        gap: 8,
+        marginBottom: 18,
     },
-    label:  {
-        fontSize: 14,
-        fontFamily: 'Almarai-Bold',
+    label: {
+        fontSize: 16,
         color: '#333',
+        marginBottom: 6,
         textAlign: 'right',
     },
-    forgotPasswordButton: {
-        alignSelf: 'flex-end',
-        marginTop: 4,
-        paddingVertical: 4,
-    },
-    forgotPasswordText: {
-        fontSize:  13,
-        fontFamily: 'Almarai-Bold',
-        color: '#FF9800',
-        textDecorationLine: 'underline',
-    },
     inputWrapper: {
-        flexDirection:  'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#e0e0e0',
-        borderRadius: 12,
-        backgroundColor: '#fff',
-        paddingHorizontal: 12,
-        minHeight: 56,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fafafa',
+        paddingHorizontal: 10,
+        paddingVertical: 2,
     },
     inputWrapperFocused: {
         borderColor: '#FF9800',
-        borderWidth: 2,
+        backgroundColor: '#fffbe6',
+    },
+    mobileInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    mobileInput: {
+        flex: 1,
+        fontSize: 18,
+        color: '#222',
+        paddingVertical: 8,
+        paddingHorizontal: 0,
+        textAlign: 'right',
+        backgroundColor: 'transparent',
+    },
+    mobilePrefix: {
+        fontSize: 16,
+        color: '#888',
+        marginLeft: 8,
     },
     icon: {
         marginLeft: 8,
     },
-    mobileInputContainer: {
-        flex: 1,
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-    },
-    mobileInput: {
-        flex: 1,
-        fontSize: 14,
-        fontFamily: 'Almarai-Regular',
-        color: '#1a1a1a',
-        paddingVertical: 12,
+    helperText: {
+        fontSize: 12,
+        color: '#888',
+        marginTop: 2,
         textAlign: 'right',
     },
-    mobilePrefix: {
-        fontSize: 14,
-        fontFamily: 'Almarai-Bold',
-        color: '#666',
-        marginRight: 8,
-    },
     passwordInputContainer: {
-        flex:  1,
-        flexDirection:  'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
     },
     passwordInput: {
         flex: 1,
-        fontSize: 14,
-        fontFamily: 'Almarai-Regular',
-        color:  '#1a1a1a',
-        paddingVertical: 12,
+        fontSize: 18,
+        color: '#222',
+        paddingVertical: 8,
+        paddingHorizontal: 0,
         textAlign: 'right',
-        letterSpacing: 2,
+        backgroundColor: 'transparent',
     },
     eyeIcon: {
-        padding: 8,
-        marginLeft: 4,
+        marginLeft: 8,
+        padding: 4,
     },
-    helperText: {
-        fontSize: 12,
-        fontFamily: 'Almarai-Regular',
-        color: '#666',
-        textAlign: 'right',
+    forgotPasswordButton: {
+        alignSelf: 'flex-end',
         marginTop: 4,
     },
+    forgotPasswordText: {
+        color: '#FF9800',
+        fontSize: 14,
+        textDecorationLine: 'underline',
+    },
     checkboxContainer: {
-        flexDirection: 'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        marginTop: 8,
+        marginBottom: 16,
     },
     checkbox: {
-        width: 24,
-        height: 24,
-        borderWidth: 2,
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 1,
         borderColor: '#FF9800',
-        borderRadius: 6,
-        alignItems: 'center',
-        justifyContent:  'center',
         backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
     },
     checkboxChecked: {
         backgroundColor: '#FF9800',
+        borderColor: '#FF9800',
     },
     rememberMeText: {
-        flex: 1,
-        fontSize:  14,
-        fontFamily: 'Almarai-Regular',
+        fontSize: 15,
         color: '#333',
-        textAlign: 'right',
     },
     submitButton: {
-        backgroundColor: '#FF9800',
-        borderRadius: 12,
-        paddingVertical: 14,
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    submitButtonDisabled:  {
-        backgroundColor: '#FFB84D',
-        opacity: 0.7,
-    },
-    submitButtonText: {
-        fontSize: 14,
-        fontFamily: 'Almarai-Bold',
-        color: '#fff',
-    },
-    orDivider:  {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 16,
-        gap: 12,
+        justifyContent: 'center',
+        backgroundColor: '#FF9800',
+        borderRadius: 8,
+        paddingVertical: 12,
+        marginTop: 8,
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#FFD699',
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 8,
+    },
+    orDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 18,
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: '#e0e0e0',
+        backgroundColor: '#eee',
     },
     orText: {
-        fontSize: 14,
-        fontFamily: 'Almarai-Regular',
-        color: '#999',
+        marginHorizontal: 12,
+        color: '#888',
+        fontSize: 16,
     },
     registerButton: {
-        backgroundColor: '#fff',
-        borderWidth: 2,
-        borderColor: '#FF9800',
-        borderRadius: 12,
-        paddingVertical: 14,
-        flexDirection: 'row-reverse',
-        alignItems:  'center',
+        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        borderWidth: 1,
+        borderColor: '#FF9800',
+        borderRadius: 8,
+        paddingVertical: 12,
+        marginTop: 8,
     },
     registerButtonText: {
-        fontSize: 14,
-        fontFamily: 'Almarai-Bold',
-        color:  '#FF9800',
+        color: '#FF9800',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor:  'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
     },
     modalContent: {
         backgroundColor: '#fff',
-        borderRadius: 20,
+        borderRadius: 16,
         padding: 24,
-        width:  '100%',
+        width: '85%',
         maxWidth: 400,
-        ... Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity:  0.3,
-                shadowRadius: 12,
-            },
-            android:  {
-                elevation: 8,
-            },
-        }),
+        alignItems: 'center',
     },
     modalHeader: {
         alignItems: 'center',
-        marginBottom: 24,
-        gap: 12,
+        marginBottom: 16,
     },
     modalTitle: {
-        fontSize: 20,
-        fontFamily: 'Almarai-Bold',
-        color: '#1a1a1a',
-        textAlign:  'center',
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#FF9800',
+        marginTop: 8,
     },
     modalSubtitle: {
-        fontSize: 14,
-        fontFamily: 'Almarai-Regular',
-        color:  '#666',
-        textAlign:  'center',
-        lineHeight: 22,
+        fontSize: 15,
+        color: '#666',
+        marginTop: 4,
+        textAlign: 'center',
     },
     modalForm: {
-        gap: 16,
+        width: '100%',
+        marginTop: 8,
     },
     modalInput: {
         flex: 1,
-        fontSize: 14,
-        fontFamily: 'Almarai-Regular',
-        color: '#1a1a1a',
-        paddingVertical: 12,
+        fontSize: 16,
+        color: '#222',
+        paddingVertical: 8,
+        paddingHorizontal: 0,
         textAlign: 'right',
+        backgroundColor: 'transparent',
     },
     modalCancelButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-        borderRadius: 12,
-        paddingVertical: 14,
+        marginTop: 12,
         alignItems: 'center',
     },
-    modalCancelText:  {
-        fontSize: 14,
-        fontFamily: 'Almarai-Bold',
-        color: '#666',
+    modalCancelText: {
+        color: '#FF9800',
+        fontSize: 16,
+        textDecorationLine: 'underline',
     },
 });

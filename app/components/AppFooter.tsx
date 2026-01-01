@@ -2,6 +2,7 @@ import { router, usePathname } from 'expo-router';
 import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { BottomNavigation, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Route = {
   key: string;
@@ -98,6 +99,8 @@ const AppFooter = () => {
     }
   };
 
+  
+
   return (
     <View
       style={[
@@ -143,6 +146,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
+    width: '100%',
   },
   bar: {
     height: FOOTER_HEIGHT,
@@ -155,3 +159,4 @@ const styles = StyleSheet.create({
 });
 
 export default React.memo(AppFooter);
+

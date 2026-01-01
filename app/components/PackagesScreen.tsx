@@ -1,6 +1,200 @@
+// import { MaterialCommunityIcons } from '@expo/vector-icons';
+// import storage from '../services/storage-helper';
+// import { addDoc, collection, serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
+// import * as React from 'react';
+// import { useState } from 'react';
+// import {
+//   Alert,
+//   Keyboard,
+//   Platform,
+//   ScrollView,
+//   StyleSheet,
+//   Text,
+//   TouchableOpacity,
+//   View,
+// } from 'react-native';
+// import { db } from '../services/firestore';
+
+// type PackagesScreenProps = {
+//   registrationData: any;
+//   onConfirm: (packageData: any) => void;
+//   onBack: () => void;
+// };
+
+// type SubscriptionPackage = {
+//   id: string;
+//   name: string;
+//   nameAr: string;
+//   icon: string;
+//   color: string;
+//   monthlyPrice: number;
+//   quarterlyPrice: number;
+//   features: string[];
+// };
+
+// const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
+//   {
+//     id: 'basic',
+//     name: 'Basic',
+//     nameAr: 'أساسي',
+//     icon: 'star-outline',
+//     color: '#2196F3',
+//     monthlyPrice: 7,
+//     quarterlyPrice: 20,
+//     features: [
+//       'عرض الملف الشخصي',
+//       'استقبال 10 طلبات شهرياً',
+//       'دعم فني أساسي',
+//       'إشعارات الطلبات',
+//     ],
+//   },
+//   {
+//     id: 'pro',
+//     name: 'Pro',
+//     nameAr: 'احترافي',
+//     icon: 'star',
+//     color: '#FF9800',
+//     monthlyPrice: 25,
+//     quarterlyPrice: 70,
+//     features: [
+//       'جميع مميزات الباقة الأساسية',
+//       'استقبال طلبات غير محدودة',
+//       'ظهور مميز في نتائج البحث',
+//       'دعم فني ذو أولوية',
+//       'إحصائيات تفصيلية',
+//     ],
+//   },
+//   {
+//     id: 'business',
+//     name: 'Business',
+//     nameAr: 'أعمال',
+//     icon: 'crown',
+//     color: '#9C27B0',
+//     monthlyPrice: 75,
+//     quarterlyPrice: 200,
+//     features: [
+//       'جميع مميزات الباقة الاحترافية',
+//       'أولوية قصوى في نتائج البحث',
+//       'إعلانات مميزة',
+//       'مدير حساب مخصص',
+//       'تقارير شهرية',
+//     ],
+//   },
+// ];
+
+// export default function PackagesScreen({
+//   registrationData,
+//   onConfirm,
+//   onBack,
+// }: PackagesScreenProps) {
+
+//   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+//   const [selectedDuration, setSelectedDuration] =
+//     useState<'monthly' | 'quarterly'>('monthly');
+//   const [acceptPolicy, setAcceptPolicy] = useState(false);
+
+//   // ===========================
+//   //  handleConfirm — (سليمة ومغلقة صح)
+//   // ===========================
+//   const handleConfirm = async () => {
+//     Keyboard.dismiss();
+
+//     if (!selectedPackage) {
+//       Alert.alert('خطأ', 'يرجى اختيار باقة الاشتراك');
+//       return;
+//     }
+
+//     if (!acceptPolicy) {
+//       Alert.alert('خطأ', 'يرجى الموافقة على سياسة الخصوصية');
+//       return;
+//     }
+
+//     const pkg = SUBSCRIPTION_PACKAGES.find(p => p.id === selectedPackage);
+//     const price =
+//       selectedDuration === 'monthly'
+//         ? pkg?.monthlyPrice
+//         : pkg?.quarterlyPrice;
+
+//     const startAt = new Date();
+//     const endAt = new Date(startAt);
+
+//     selectedDuration === 'monthly'
+//       ? endAt.setMonth(endAt.getMonth() + 1)
+//       : endAt.setMonth(endAt.getMonth() + 3);
+
+//     const userData = {
+//       ...registrationData,
+//       subscription: {
+//         package: pkg?.id || "basic",
+//         packageName: pkg?.nameAr || "أساسي",
+//         duration: selectedDuration,
+//         price: price || 7,
+//         startAt: startAt.toISOString(),
+//         endAt: endAt.toISOString(),
+//         isActive: true,
+//       },
+//       status: { approved: true, suspended: false },
+//       metadata: {
+//         createdAt: serverTimestamp(),
+//         updatedAt: serverTimestamp(),
+//         lastLogin: serverTimestamp(),
+//       },
+//     };
+
+//     try {
+//       const docRef = await addDoc(collection(db, "users"), userData);
+
+//       await setDoc(
+//         doc(db, "lookup_professions", registrationData.jobTitle),
+//         { count: increment(1) },
+//         { merge: true }
+//       );
+
+//       await setDoc(
+//         doc(db, "lookup_areas", registrationData.area),
+//         { count: increment(1) },
+//         { merge: true }
+//       );
+
+//       await setDoc(
+//         doc(db, "lookup_packages", userData.subscription.package),
+//         { count: increment(1) },
+//         { merge: true }
+//       );
+
+//       const userDataWithId = {
+//         id: docRef.id,
+//         ...registrationData,
+//         subscription: { ...userData.subscription },
+//         status: userData.status,
+//         metadata: {
+//           createdAt: startAt.toISOString(),
+//           updatedAt: startAt.toISOString(),
+//           lastLogin: startAt.toISOString(),
+//         },
+//       };
+
+//       await storage.setObject("userProfile", userDataWithId);
+//       await storage.setObject("currentUser", userDataWithId);
+
+//       const allUsers = (await storage.getObject<any[]>('allUsers')) || [];
+//       allUsers.push(userDataWithId);
+//       await storage.setObject("allUsers", allUsers);
+
+//       onConfirm(userDataWithId);
+
+//       Alert.alert("👍 تم التسجيل", "تم إنشاء حسابك بنجاح");
+
+//     } catch (error) {
+//       console.log("Firestore error:", error);
+//       Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
+//     }
+//   };
+
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import storage from '../services/storage-helper';
-import { addDoc, collection, serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
+import { serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -14,6 +208,8 @@ import {
   View,
 } from 'react-native';
 import { db } from '../services/firestore';
+import { auth } from '../services/firestore';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type PackagesScreenProps = {
   registrationData: any;
@@ -93,9 +289,6 @@ export default function PackagesScreen({
     useState<'monthly' | 'quarterly'>('monthly');
   const [acceptPolicy, setAcceptPolicy] = useState(false);
 
-  // ===========================
-  //  handleConfirm — (سليمة ومغلقة صح)
-  // ===========================
   const handleConfirm = async () => {
     Keyboard.dismiss();
 
@@ -142,7 +335,29 @@ export default function PackagesScreen({
     };
 
     try {
-      const docRef = await addDoc(collection(db, "users"), userData);
+      const uid = auth.currentUser?.uid;
+
+      if (!uid) {
+        Alert.alert("خطأ", "المستخدم غير مسجل دخول");
+        return;
+      }
+
+      await setDoc(doc(db, "users", uid), userData, { merge: true });
+
+      const cachedUser = {
+        uid,
+        ...registrationData,
+        subscription: userData.subscription,
+        status: userData.status,
+        metadata: {
+          createdAt: startAt.toISOString(),
+          updatedAt: startAt.toISOString(),
+          lastLogin: startAt.toISOString(),
+        },
+      };
+
+      await AsyncStorage.setItem("currentUser", JSON.stringify(cachedUser));
+      await AsyncStorage.setItem("userProfile", JSON.stringify(cachedUser));
 
       await setDoc(
         doc(db, "lookup_professions", registrationData.jobTitle),
@@ -162,37 +377,15 @@ export default function PackagesScreen({
         { merge: true }
       );
 
-      const userDataWithId = {
-        id: docRef.id,
-        ...registrationData,
-        subscription: { ...userData.subscription },
-        status: userData.status,
-        metadata: {
-          createdAt: startAt.toISOString(),
-          updatedAt: startAt.toISOString(),
-          lastLogin: startAt.toISOString(),
-        },
-      };
+      onConfirm(cachedUser);
 
-      await storage.setObject("userProfile", userDataWithId);
-      await storage.setObject("currentUser", userDataWithId);
-
-      const allUsers = (await storage.getObject<any[]>('allUsers')) || [];
-      allUsers.push(userDataWithId);
-      await storage.setObject("allUsers", allUsers);
-
-      onConfirm(userDataWithId);
-
-      Alert.alert("👍 تم التسجيل", "تم إنشاء حسابك بنجاح");
+      Alert.alert("👍 تم التسجيل", "تم حفظ بياناتك بنجاح");
 
     } catch (error) {
       console.log("Firestore error:", error);
       Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
     }
   };
-
-
-
 
 
   return (

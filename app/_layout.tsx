@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { Provider as PaperProvider, ActivityIndicator } from 'react-native-paper';
 import useAppFonts from './theme/useAppFonts';
 import theme from './theme/theme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 
 
 export default function RootLayout() {
@@ -18,15 +20,19 @@ export default function RootLayout() {
 
    if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
+  <ActivityIndicator size="large" />
+</View>
     );
   }
 
   return (
-    <PaperProvider theme={theme}>
-      <Slot />
-    </PaperProvider>
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+            <Slot />
+          </PaperProvider>
+    </SafeAreaProvider>
+    
+   
   );
 }

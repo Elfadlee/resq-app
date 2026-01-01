@@ -10,7 +10,10 @@ import PackagesScreen from '../components/PackagesScreen';
 import ProfileBanner from '../components/ProfileBanner';
 import ProfileEdit from '../components/ProfileEdit'; // ✅ استيراد ProfileEdit
 import storage from '../services/storage-helper';
-import { db } from '../services/firestore';   // or ../services/firebase (depending on your file name)
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../services/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../services/firestore";
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ContactScreen from './ContactScreen';
@@ -70,16 +73,21 @@ export default function ProfileScreen() {
     setLoading(false);
   };
 
-  const handleLogin = async (mobile: string, password: string) => {
-    const user = await loginUser(mobile, password);
+const handleLogin = async (email: string, password: string) => {
+  const res = await signInWithEmailAndPassword(auth, email, password);
+  const uid = res.user.uid;
 
-    if (user) {
-      setCurrentUser(user);
-      setCurrentScreen('profile');
-    } else {
-      Alert.alert('❌ خطأ', 'رقم الجوال أو كلمة المرور غير صحيحة');
-    }
-  };
+  const userDoc = await getDoc(doc(db, "users", uid));
+
+  if (userDoc.exists()) {
+    setCurrentUser({ id: userDoc.id, ...(userDoc.data() as User) });
+    setCurrentScreen("profile");
+  } else {
+    // مستخدم جديد → نكملة البروفايل
+    setRegistrationData({ email });
+    setCurrentScreen("packages");
+  }
+};
 
   const handleRegistrationNext = (data: any) => {
     setRegistrationData(data);
