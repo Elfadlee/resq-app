@@ -1,17 +1,20 @@
 import * as AppleAuthentication from "expo-apple-authentication";
 import { OAuthProvider, signInWithCredential } from "firebase/auth";
 import { Alert, Platform } from "react-native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../services/firestore";
 
+interface AppleLoginButtonProps {
+  onSocialLogin?: (draft: any) => void;
+}
 
+export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProps) {
 
-export default function AppleLoginButton() {
-  // 📌 إخفاء الزر على Android (Apple لا يعمل هناك)
   if (Platform.OS === "android") return null;
 
   const handleAppleLogin = async () => {
     try {
+
       const apple = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -19,26 +22,54 @@ export default function AppleLoginButton() {
         ],
       });
 
-      // ⚠ Apple أحيانًا لا يرجّع identityToken
       if (!apple.identityToken) {
         Alert.alert("فشل تسجيل الدخول", "Apple لم يرجّع identityToken");
         return;
       }
 
-      const provider = new OAuthProvider("apple.com");
+      // 🟢 استخراج الاسم — Apple يرسله فقط أول تسجيل
+      let fullName =
+        apple.fullName?.givenName && apple.fullName?.familyName
+          ? `${apple.fullName.givenName} ${apple.fullName.familyName}`
+          : "";
 
+      // إذا وصل اسم لأول مرة → نخزّنه
+      if (fullName) {
+        await AsyncStorage.setItem("savedAppleName", fullName);
+      } else {
+        // إذا ما رجع الاسم لاحقًا → نقرأه من التخزين
+        const stored = await AsyncStorage.getItem("savedAppleName");
+        fullName = stored || "";
+      }
+
+      const provider = new OAuthProvider("apple.com");
       const credential = provider.credential({
         idToken: apple.identityToken,
       });
 
-      await signInWithCredential(auth, credential);
+      const userCredential = await signInWithCredential(auth, credential);
+      const user = userCredential.user;
 
-      console.log("🍎 Apple login success");
-      Alert.alert("نجاح", "تم تسجيل الدخول بنجاح");
+      // 📦 تجهيز بيانات التسجيل للفورم
+      const draft = {
+        name: fullName || "",
+        email: apple.email || user.email || "",
+        mobile: "",
+        jobTitle: "",
+        area: "",
+        description: "",
+      };
+
+      onSocialLogin?.(draft);
+
+      Alert.alert(
+        "إكمال التسجيل",
+        "يرجى إكمال بيانات حسابك قبل المتابعة"
+      );
     }
 
     catch (err: any) {
-      if (err?.code === "ERR_CANCELED") return; // المستخدم أغلق النافذة
+      if (err?.code === "ERR_CANCELED") return;
       console.log("APPLE ERROR:", err);
       Alert.alert("خطأ في تسجيل Apple", err?.message ?? "Unknown error");
     }

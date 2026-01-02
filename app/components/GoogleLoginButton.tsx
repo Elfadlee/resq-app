@@ -1,28 +1,39 @@
-import React, { useEffect } from 'react';
-import { Button, Alert } from 'react-native';
-import { useAuthRequest } from 'expo-auth-session/providers/google';
 
+
+import React, { useEffect } from 'react';
+import { Button, Alert, Platform } from 'react-native';
+import { useAuthRequest } from 'expo-auth-session/providers/google';
+import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { auth } from "../services/firestore";
+
+// Props to callback after social login
 interface GoogleLoginButtonProps {
-  onLogin: (accessToken: string) => void;
+  onSocialLogin: (user: any) => void;
 }
 
-export default function GoogleLoginButton({ onLogin }: GoogleLoginButtonProps) {
+export default function GoogleLoginButton({ onSocialLogin }: GoogleLoginButtonProps) {
   const [request, response, promptAsync] = useAuthRequest({
     androidClientId: 'YOUR-ANDROID-CLIENT-ID.apps.googleusercontent.com',
-    // iosClientId: 'YOUR-IOS-CLIENT-ID.apps.googleusercontent.com', // لو تحتاج مستقبلاً
-    // webClientId: 'YOUR-WEB-CLIENT-ID.apps.googleusercontent.com', // لو تحتاج
   });
 
   useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      if (authentication && authentication.accessToken) {
-        onLogin(authentication.accessToken); // اربطه بفنكشن تسجيلك بالفابيربيز الخ
-        // يمكنك تجربة التنبيه:
-        // Alert.alert('نجاح Google', JSON.stringify(authentication));
+    const authenticate = async () => {
+      if (response?.type === 'success') {
+        const { authentication } = response;
+        if (authentication && authentication.accessToken) {
+          // Firebase Google Auth
+          const credential = GoogleAuthProvider.credential(null, authentication.accessToken);
+          const userCredential = await signInWithCredential(auth, credential);
+          // استدعاء الكولباك مع بيانات المستخدم للفحص هل جديد أو لا
+          onSocialLogin && onSocialLogin(userCredential.user);
+        }
       }
-    }
-  }, [response, onLogin]);
+    };
+    authenticate();
+  }, [response, onSocialLogin]);
+
+  // لا يظهر على iOS - فقط أندرويد
+  if (Platform.OS !== "android") return null;
 
   return (
     <Button

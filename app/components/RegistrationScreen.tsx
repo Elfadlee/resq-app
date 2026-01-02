@@ -16,11 +16,12 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type RegistrationScreenProps = {
-    initialData?:  any;
-    onNext: (data: any) => void;
-    onBackToLogin: () => void;
-};
+    type RegistrationScreenProps = {
+        initialData?: any;
+        isSocialSignup?: boolean;   // 👈 جديد
+        onNext: (data: any) => void;
+        onBackToLogin: () => void;
+    };
 
 const JOBS = [
     'كهربائي',
@@ -69,10 +70,12 @@ const formatMobileDisplay = (mobile: string): string => {
 
 export default function RegistrationScreen({
     initialData,
+    isSocialSignup,
     onNext,
     onBackToLogin,
 }: RegistrationScreenProps) {
-    const [name, setName] = useState(initialData?.name || '');
+
+
     const [mobile, setMobile] = useState(initialData?.mobile?. replace('+964', '') || '');
     const [email, setEmail] = useState(initialData?.email || '');
     const [description, setDescription] = useState(initialData?.description || '');
@@ -80,6 +83,8 @@ export default function RegistrationScreen({
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [name, setName] = useState(initialData?.name || '');
+
 
     const [jobTitle, setJobTitle] = useState(initialData?.jobTitle || '');
     const [area, setArea] = useState(initialData?.area || '');
@@ -91,6 +96,19 @@ export default function RegistrationScreen({
     const mobileInputRef = useRef<RNTextInput>(null);
 
     const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
+
+      React.useEffect(() => {
+            if (!initialData) return;
+
+            setName(initialData.name || name || "");   // ← يعبّي الاسم إذا وصل
+            setEmail(initialData.email || "");
+            setMobile(initialData.mobile?.replace("+964", "") || "");
+            setJobTitle(initialData.jobTitle || "");
+            setArea(initialData.area || "");
+            setDescription(initialData.description || "");
+            }, [initialData]);
+
+
 
     const handleMobileChange = (text: string) => {
         const convertedText = convertArabicToEnglish(text);
@@ -292,6 +310,7 @@ export default function RegistrationScreen({
                                 onFocus={() => setFocusedField('email')}
                                 onBlur={() => setFocusedField(null)}
                                 returnKeyType="next"
+                                editable={!isSocialSignup}
                             />
                             <MaterialCommunityIcons name="email" size={20} color="#FF9800" style={styles.icon} />
                         </View>

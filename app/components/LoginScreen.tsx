@@ -1,3 +1,5 @@
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import {  db } from "../services/firestore";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
@@ -15,6 +17,29 @@ import {
 
 import GoogleLoginButton from './GoogleLoginButton';
 import AppleLoginButton from './AppleLoginButton';
+
+
+async function saveUserProfile(user:any) {
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+
+  const data = {
+    uid: user.uid,
+    name: user.displayName ?? "مستخدم جديد",
+    email: user.email ?? "",
+    provider: user.providerData?.[0]?.providerId ?? "apple",
+    updatedAt: serverTimestamp(),
+  };
+
+  // أول مرة يسجل → إنشاء
+  if (!snap.exists()) {
+    await setDoc(ref, { ...data, createdAt: serverTimestamp() });
+  }
+  // موجود مسبقًا → تحديث بدون مسح البيانات
+  else {
+    await setDoc(ref, data, { merge: true });
+  }
+}
 
 type LoginScreenProps = {
     onLogin: (mobile: string, password: string, rememberMe: boolean) => void;
@@ -40,7 +65,7 @@ const formatMobileDisplay = (mobile: string): string => {
     return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
 };
 
-export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, onGoToRegister, navigation }: LoginScreenProps & { navigation?: any }) {
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -130,13 +155,25 @@ export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProp
                     {/* === فقط على الموبايل: أزرار Google/Apple بشكل مرتب أعلى الفورم === */}
                     {Platform.OS !== "web" && (
                         <View style={{ marginBottom: 16 }}>
-                            {Platform.OS === "ios" && (
-                                <AppleLoginButton onLogin={onLogin} />
-                            )}
-                            {Platform.OS === "android" && (
-                                <GoogleLoginButton onLogin={onLogin} />
-                            )}
-                            <Text style={{ textAlign: "center", marginVertical: 8, color: '#aaa' }}>أو</Text>
+                    {Platform.OS === "ios" && (
+                     <AppleLoginButton
+                        onSocialLogin={(draft) => {
+                            navigation?.navigate("Registration", {
+                            initialData: draft,
+                            isSocialSignup: true,
+                            });
+                        }}
+                        />
+
+                    )}
+
+                            {/* <GoogleLoginButton
+                                onSocialLogin={async (user) => {
+                                    await saveUserProfile(user);
+                                    Alert.alert("نجاح", "تم تسجيل الدخول عبر Google 🎉");
+                                    navigation?.goBack?.();
+                                }}
+                            /> */}
                         </View>
                     )}
 
@@ -575,3 +612,4 @@ const styles = StyleSheet.create({
         textDecorationLine: 'underline',
     },
 });
+

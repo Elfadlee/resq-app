@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, Alert, View, ActivityIndicator } from 'react-native';
+import { ScrollView, ActivityIndicator, Alert } from 'react-native';
 
 import AppHeader from '../components/AppHeader';
 import AppFooter from '../components/AppFooter';
@@ -8,8 +8,9 @@ import LoginScreen from '../components/LoginScreen';
 import RegistrationScreen from '../components/RegistrationScreen';
 import PackagesScreen from '../components/PackagesScreen';
 import ProfileBanner from '../components/ProfileBanner';
-import ProfileEdit from '../components/ProfileEdit'; // ✅ استيراد ProfileEdit
+import ProfileEdit from '../components/ProfileEdit';
 import storage from '../services/storage-helper';
+
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../services/firestore";
 import { doc, getDoc } from "firebase/firestore";
@@ -22,25 +23,13 @@ const USERS_KEY = "allUsers";
 const CURRENT_USER_KEY = "currentUser";
 
 const getCurrentUser = async (): Promise<User | null> => {
-return await storage.getObject<User>(CURRENT_USER_KEY);};
-
-const loginUser = async (mobile: string, password: string) => {
-  const users = (await storage.getObject<User[]>(USERS_KEY)) || [];
-  return users.find(u => u.mobile === mobile && u.password === password) || null;
+  return await storage.getObject<User>(CURRENT_USER_KEY);
 };
 
-const registerUser = async (user: any) => {
-  const users = (await storage.getObject<User[]>(USERS_KEY)) || [];
-  users.push(user);
-
-  await storage.setObject(USERS_KEY, users);
-  await storage.setObject(CURRENT_USER_KEY, user);
-
-  return user;
-};
-
-
-type CurrentScreen = 'login' | 'register' | 'packages' | 'profile' | 'editProfile' | 'upgradePackage'| 'contact';
+type CurrentScreen =
+  | 'login' | 'register' | 'packages'
+  | 'profile' | 'editProfile'
+  | 'upgradePackage' | 'contact';
 
 type User = {
   id?: string;
@@ -56,7 +45,11 @@ type User = {
 export default function ProfileScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentScreen, setCurrentScreen] = useState<CurrentScreen>('login');
+
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [registrationParams, setRegistrationParams] = useState<any>(null);
+
+  const [isSocialSignup, setIsSocialSignup] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,28 +59,29 @@ export default function ProfileScreen() {
   const loadUser = async () => {
     setLoading(true);
     const user = await getCurrentUser();
+
     if (user) {
       setCurrentUser(user);
       setCurrentScreen('profile');
     }
+
     setLoading(false);
   };
 
-const handleLogin = async (email: string, password: string) => {
-  const res = await signInWithEmailAndPassword(auth, email, password);
-  const uid = res.user.uid;
+  const handleLogin = async (email: string, password: string) => {
+    const res = await signInWithEmailAndPassword(auth, email, password);
+    const uid = res.user.uid;
 
-  const userDoc = await getDoc(doc(db, "users", uid));
+    const userDoc = await getDoc(doc(db, "users", uid));
 
-  if (userDoc.exists()) {
-    setCurrentUser({ id: userDoc.id, ...(userDoc.data() as User) });
-    setCurrentScreen("profile");
-  } else {
-    // مستخدم جديد → نكملة البروفايل
-    setRegistrationData({ email });
-    setCurrentScreen("packages");
-  }
-};
+    if (userDoc.exists()) {
+      setCurrentUser({ id: userDoc.id, ...(userDoc.data() as User) });
+      setCurrentScreen("profile");
+    } else {
+      setRegistrationData({ email });
+      setCurrentScreen("register");
+    }
+  };
 
   const handleRegistrationNext = (data: any) => {
     setRegistrationData(data);
@@ -95,39 +89,54 @@ const handleLogin = async (email: string, password: string) => {
   };
 
   const handlePackageConfirm = async (pkg: any) => {
-    const newUser = { ...registrationData, ... pkg };
-    const user = await registerUser(newUser);
-    setCurrentUser(user);
+    const newUser = { ...registrationData, ...pkg };
+    setCurrentUser(newUser);
     setRegistrationData(null);
     setCurrentScreen('profile');
   };
 
-  // Navigation object محاكي
+  // ---------------- NAVIGATION SIMULATOR ----------------
   const navigation = {
     navigate: (screenName: string, params?: any) => {
-      console.log('Navigate to:', screenName, params);
-      
-      if (screenName === 'EditProfile') {
-        setCurrentScreen('editProfile');
-      } else if (screenName === 'PackagesScreen') {
-        setCurrentScreen('upgradePackage');
+      console.log("Navigate to:", screenName, params);
+
+      if (screenName === "EditProfile") {
+        setCurrentScreen("editProfile");
+      }
+
+      else if (screenName === "PackagesScreen") {
+        setCurrentScreen("upgradePackage");
+      }
+
+      else if (screenName === "Registration") {
+
+        // 🟢 هنا المهم — نخزن بيانات Apple داخل registrationParams
+        if (params?.initialData) {
+          setRegistrationParams(params.initialData);
+        } else {
+          setRegistrationParams(null);
+        }
+
+        setIsSocialSignup(!!params?.isSocialSignup);
+        setCurrentScreen("register");
       }
     },
+
     goBack: () => {
-      console.log('Go back');
-      setCurrentScreen('profile');
-      loadUser(); // تحديث البيانات عند العودة
+      setCurrentScreen("profile");
+      loadUser();
     },
-    reset: (config:  any) => {
-      console. log('Reset navigation', config);
-      setCurrentScreen('login');
+
+    reset: () => {
+      setCurrentScreen("login");
       setCurrentUser(null);
     }
   };
+  // ------------------------------------------------------
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FF9800" />
       </SafeAreaView>
     );
@@ -135,97 +144,63 @@ const handleLogin = async (email: string, password: string) => {
 
   const renderScreen = () => {
     switch (currentScreen) {
+
       case 'login':
         return (
           <LoginScreen
+            navigation={navigation}
             onLogin={handleLogin}
-            onGoToRegister={() => setCurrentScreen('register')}
+            onGoToRegister={() => {
+              setRegistrationParams(null);
+              setIsSocialSignup(false);
+              setCurrentScreen("register");
+            }}
           />
         );
 
       case 'register':
         return (
           <RegistrationScreen
+            initialData={registrationParams}   // ✅ الآن البيانات تصل للفورم
+            isSocialSignup={isSocialSignup}
             onNext={handleRegistrationNext}
-            onBackToLogin={() => setCurrentScreen('login')}
+            onBackToLogin={() => setCurrentScreen("login")}
           />
         );
 
-      case 'packages': 
+      case 'packages':
         return (
           <PackagesScreen
             registrationData={registrationData}
             onConfirm={handlePackageConfirm}
-            onBack={() => setCurrentScreen('register')}
+            onBack={() => setCurrentScreen("register")}
           />
         );
 
-      case 'profile':  
-        return currentUser ? (
-          <ProfileBanner 
-            navigation={navigation} 
-            onRefresh={loadUser} 
-          />
-        ) : null;
+      case 'profile':
+        return currentUser && (
+          <ProfileBanner navigation={navigation} onRefresh={loadUser} />
+        );
 
-      case 'editProfile':  
-        return currentUser ? (
+      case 'editProfile':
+        return currentUser && (
           <ProfileEdit
-            navigation={navigation}  
-            route={{                 
-              params: {
-                profile: currentUser,
-                onSave: async () => {
-                  await loadUser(); 
-                }
-              }
-            }}
+            navigation={navigation}
+            route={{ params: { profile: currentUser } }}
           />
-        ) : null;
+        );
 
-      case 'upgradePackage': 
-        return currentUser ? (
+      case 'upgradePackage':
+        return (
           <PackagesScreen
             registrationData={currentUser}
-            onConfirm={async (newPackageData:  any) => {
-              try {
-                const updatedProfile = {
-                  ...currentUser,
-                  ... newPackageData,
-                };
-                await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-                
-                // تحديث allUsers أيضاً
-                const allUsersData = await AsyncStorage.getItem('allUsers');
-                if (allUsersData) {
-                  const allUsers = JSON. parse(allUsersData);
-                  const userIndex = allUsers.findIndex(
-                    (u: any) => u.mobile === currentUser.mobile || u.id === currentUser.id
-                  );
-                  if (userIndex !== -1) {
-                    allUsers[userIndex] = updatedProfile;
-                    await AsyncStorage.setItem('allUsers', JSON.stringify(allUsers));
-                  }
-                }
-
-                Alert.alert('نجاح', 'تم تحديث الباقة بنجاح');
-                setCurrentUser(updatedProfile);
-                setCurrentScreen('profile');
-                await loadUser();
-              } catch (error) {
-                console.error('Error updating package:', error);
-                Alert.alert('خطأ', 'فشل تحديث الباقة');
-              }
-            }}
-            onBack={() => {
-              setCurrentScreen('profile');
-            }}
+            onConfirm={() => setCurrentScreen("profile")}
+            onBack={() => setCurrentScreen("profile")}
           />
-        ) : null;
-        
-        case 'contact':
-        return <ContactScreen />;
+        );
 
+      case 'contact':
+        return <ContactScreen />;
 
       default:
         return null;
@@ -233,13 +208,10 @@ const handleLogin = async (email: string, password: string) => {
   };
 
   return (
-    <SafeAreaView style={{ flex:  1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <AppHeader onMenuOpen={() => {}} />
 
-      <ScrollView 
-        contentContainerStyle={{ paddingBottom:  24, flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         {renderScreen()}
       </ScrollView>
 
