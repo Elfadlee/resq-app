@@ -37,46 +37,56 @@ export default function HeroSearch({ onSearch }: { onSearch: (job: string, area:
   const [areaLocked, setAreaLocked] = useState(false);
 
   // تحميل العلاقات من users
-  useEffect(() => {
-    const loadRelations = async () => {
-      try {
-        const snap = await getDocs(collection(db, "users"));
+useEffect(() => {
+  const loadRelations = async () => {
+    try {
+      const snap = await getDocs(collection(db, "users"));
 
-        const allJobs = new Set<string>();
-        const allAreas = new Set<string>();
+      const _jobsByArea: Record<string,string[]> = {};
+      const _areasByJob: Record<string,string[]> = {};
 
-        const _jobsByArea: Record<string,string[]> = {};
-        const _areasByJob: Record<string,string[]> = {};
+      const allJobs = new Set<string>();
+      const allAreas = new Set<string>();
 
-        snap.forEach(doc => {
-          const u: any = doc.data();
-          if (!u.jobTitle || !u.area) return;
+      snap.forEach(doc => {
+        const u: any = doc.data();
+        if (!u?.jobTitle || !u?.area) return;
 
-          const j = u.jobTitle;
-          const a = u.area;
+        const j = String(u.jobTitle).trim();
+        const a = String(u.area).trim();
 
-          allJobs.add(j);
-          allAreas.add(a);
+        // 🔹 ربط المهنة بالمناطق
+        _areasByJob[j] = Array.from(
+          new Set([...( _areasByJob[j] || [] ), a])
+        );
 
-          _jobsByArea[a] = Array.from(new Set([...( _jobsByArea[a] || [] ), j]));
-          _areasByJob[j] = Array.from(new Set([...( _areasByJob[j] || [] ), a]));
-        });
+        // 🔹 ربط المنطقة بالمهن
+        _jobsByArea[a] = Array.from(
+          new Set([...( _jobsByArea[a] || [] ), j])
+        );
 
-        jobsByArea.current = _jobsByArea;
-        areasByJob.current = _areasByJob;
+        // 🔹 إضافة القيم المستعملة فقط
+        allJobs.add(j);
+        allAreas.add(a);
+      });
 
-        setJobs(Array.from(allJobs));
-        setAreas(Array.from(allAreas));
+      jobsByArea.current = _jobsByArea;
+      areasByJob.current = _areasByJob;
 
-      } catch (e) {
-        console.log("relation load error:", e);
-        setJobs([]);
-        setAreas([]);
-      }
-    };
+      // ✅ تعبئة القوائم من الواقع فقط
+      setJobs([...allJobs]);
+      setAreas([...allAreas]);
 
-    loadRelations();
-  }, []);
+    } catch (e) {
+      console.log("relation load error:", e);
+      setJobs([]);
+      setAreas([]);
+    }
+  };
+
+  loadRelations();
+}, []);
+
 
   // تحديث القوائم حسب الاختيار
   useEffect(() => {

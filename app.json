@@ -1,7 +1,10 @@
 {
   "expo": {
-    "name": "fist-rn-app",
+    "name": "Rizq-app",
     "slug": "fist-rn-app",
+     "updates": {
+      "enabled": false
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

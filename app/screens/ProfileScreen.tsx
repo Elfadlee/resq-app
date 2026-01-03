@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, ActivityIndicator, Alert } from 'react-native';
-
-import AppHeader from '../components/AppHeader';
-import AppFooter from '../components/AppFooter';
+import { ScrollView, ActivityIndicator } from 'react-native';
 import LoginScreen from '../components/LoginScreen';
 import RegistrationScreen from '../components/RegistrationScreen';
 import PackagesScreen from '../components/PackagesScreen';
@@ -16,8 +13,8 @@ import { auth } from "../services/firestore";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firestore";
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import ContactScreen from './ContactScreen';
+import AppDrawer from '../components/AppDrawer';
 
 const USERS_KEY = "allUsers";
 const CURRENT_USER_KEY = "currentUser";
@@ -45,6 +42,7 @@ type User = {
 export default function ProfileScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentScreen, setCurrentScreen] = useState<CurrentScreen>('login');
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [registrationParams, setRegistrationParams] = useState<any>(null);
@@ -58,15 +56,38 @@ export default function ProfileScreen() {
 
   const loadUser = async () => {
     setLoading(true);
-    const user = await getCurrentUser();
 
-    if (user) {
-      setCurrentUser(user);
-      setCurrentScreen('profile');
+    const storedUser = await getCurrentUser();
+    if (storedUser) {
+      setCurrentUser(storedUser);
+      setCurrentScreen("profile");   
+      setLoading(false);
+      return;
     }
 
+   
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      const snap = await getDoc(doc(db, "users", uid));
+
+      if (snap.exists()) {
+        const userData = { id: snap.id, ...(snap.data() as any) };
+
+
+        await storage.setObject(CURRENT_USER_KEY, userData);
+
+        setCurrentUser(userData);
+        setCurrentScreen("profile");  
+        setLoading(false);
+        return;
+      }
+    }
+
+  
+    setCurrentScreen("login");
     setLoading(false);
   };
+
 
   const handleLogin = async (email: string, password: string) => {
     const res = await signInWithEmailAndPassword(auth, email, password);
@@ -110,7 +131,6 @@ export default function ProfileScreen() {
 
       else if (screenName === "Registration") {
 
-        // 🟢 هنا المهم — نخزن بيانات Apple داخل registrationParams
         if (params?.initialData) {
           setRegistrationParams(params.initialData);
         } else {
@@ -144,24 +164,39 @@ export default function ProfileScreen() {
 
   const renderScreen = () => {
     switch (currentScreen) {
-
       case 'login':
         return (
           <LoginScreen
             navigation={navigation}
             onLogin={handleLogin}
-            onGoToRegister={() => {
-              setRegistrationParams(null);
-              setIsSocialSignup(false);
+
+
+            onGoToRegister={(params?: any) => {
+
+              if (params?.initialData) {
+                setRegistrationParams(params.initialData);
+              } else {
+                setRegistrationParams(null);
+              }
+
+              setIsSocialSignup(!!params?.isSocialSignup);
               setCurrentScreen("register");
             }}
+
+
+            goToProfile={() => {
+              loadUser();              // 👈 حمّل المستخدم من Firestore / AsyncStorage
+              setCurrentScreen("profile");
+            }}
+
           />
+
         );
 
       case 'register':
         return (
           <RegistrationScreen
-            initialData={registrationParams}   // ✅ الآن البيانات تصل للفورم
+            initialData={registrationParams}
             isSocialSignup={isSocialSignup}
             onNext={handleRegistrationNext}
             onBackToLogin={() => setCurrentScreen("login")}
@@ -208,14 +243,27 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-      <AppHeader onMenuOpen={() => {}} />
+    <React.Fragment>
+      {/* HEADER نفس MainScreen */}
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+
+      {/* المحتوى مع سكرول فقط */}
+      <ScrollView contentContainerStyle={{ flexGrow: 1, backgroundColor: '#f5f5f5' }}>
         {renderScreen()}
       </ScrollView>
 
-      <AppFooter />
-    </SafeAreaView>
+      {/* FOOTER نفس MainScreen */}
+
+
+      {/* Drawer دائماً خارج */}
+      <AppDrawer
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onNavigate={(route) => {
+          setCurrentScreen(route === "contact" ? "contact" : (route as any));
+          setDrawerOpen(false);
+        }}
+      />
+    </React.Fragment>
   );
 }

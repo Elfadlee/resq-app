@@ -12,8 +12,15 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import storage from '../services/storage-helper';
+import { deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { db, auth } from "../services/firestore";
+import { deleteUser } from "firebase/auth";
+import { signOut } from "firebase/auth";
+
 
 type UserProfile = {
+  uid?: string;
+  id?: string;
   name: string;
   jobTitle: string;
   area: string;
@@ -54,10 +61,10 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   };
 
   const saveProfileEverywhere = async (updated: UserProfile) => {
-    // حفظ المستخدم الحالي
+
     await storage.setObject('currentUser', updated);
 
-    // تحديث allUsers إن وجد
+
     const allUsers = (await storage.getObject<UserProfile[]>('allUsers')) || [];
     const index = allUsers.findIndex(
       u => u.mobile === updated.mobile
@@ -137,26 +144,55 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
   const confirmDeleteAccount = async () => {
     try {
-      await storage.removeItem('currentUser');
+      console.log("🔥 DELETE START");
 
-      const allUsers = (await storage.getObject<UserProfile[]>('allUsers')) || [];
-      const filtered = allUsers.filter(u => u.mobile !== profile?.mobile);
-      await storage.setObject('allUsers', filtered);
+      // ⚠️ أهم شيء — نستخدم uid الحقيقي
+      const uid =
+        profile?.uid || profile?.id || auth.currentUser?.uid || null;
 
-      Alert.alert('تم الحذف', 'تم حذف الحساب بنجاح', [
+      console.log("UID =", uid);
+
+      if (!uid) {
+        Alert.alert("خطأ", "لم يتم العثور على معرف المستخدم (UID)");
+        return;
+      }
+
+      const userRef = doc(db, "users", uid);
+      console.log("DOC PATH =", userRef.path);
+
+      // 🧨 حذف الوثيقة من Firestore
+      try {
+        await deleteDoc(userRef);
+        console.log("✅ FIRESTORE DOC DELETED");
+      } catch (err) {
+        console.log("❌ FIRESTORE DELETE ERROR:", err);
+        Alert.alert("خطأ", "فشل حذف الحساب من قاعدة البيانات");
+        return;
+      }
+
+      // 🧹 حذف التخزين المحلي
+      await storage.removeItem("currentUser");
+      await storage.removeItem("allUsers");
+
+      // 🚪 خروج وإعادة التوجيه
+      Alert.alert("تم حذف الحساب", "تم حذف حسابك بنجاح", [
         {
-          text: 'حسناً',
-          onPress: () =>
+          text: "حسناً",
+          onPress: () => {
+            setProfile?.(null);
             navigation?.reset?.({
               index: 0,
-              routes: [{ name: 'Login' }],
-            }),
+              routes: [{ name: "Login" }],
+            });
+          },
         },
       ]);
     } catch (e) {
-      Alert.alert('خطأ', 'فشل حذف الحساب');
+      console.log("❌ UNKNOWN DELETE ERROR:", e);
+      Alert.alert("خطأ", "حدث خطأ غير متوقع أثناء الحذف");
     }
   };
+
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -170,10 +206,23 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
     );
   };
 
-    const handleLogout = async () => {
-      await storage.clear();
-      navigation?.reset?.({ index: 0, routes: [{ name: 'Login' }] });
-    };
+
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);          
+    } catch (e) {
+      console.log("signOut error", e);
+    }
+
+    await storage.clear();        
+
+    navigation?.reset?.({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  };
+
 
   if (loading)
     return (
@@ -212,7 +261,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section - بدون دائرة */}
-        <View style={styles. header}>
+        <View style={styles.header}>
           <Text style={styles.name}>{profile.name}</Text>
           <View style={styles.jobBadge}>
             <Text style={styles.jobTitle}>{profile.jobTitle}</Text>
@@ -227,7 +276,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
         {/* Personal Information Section */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Text style={styles. sectionTitle}>المعلومات الشخصية</Text>
+            <Text style={styles.sectionTitle}>المعلومات الشخصية</Text>
             <MaterialCommunityIcons name="account-circle" size={24} color="#FF9800" />
           </View>
 
@@ -243,9 +292,9 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
         </View>
 
         {/* Subscription Section */}
-        <View style={styles. sectionCard}>
+        <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Text style={styles. sectionTitle}>معلومات الاشتراك</Text>
+            <Text style={styles.sectionTitle}>معلومات الاشتراك</Text>
             <MaterialCommunityIcons name="crown" size={24} color="#FF9800" />
           </View>
 
@@ -280,8 +329,8 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             {/* Days Remaining Alert */}
             <View
               style={[
-                styles. daysRemainingCard,
-                isExpiringSoon && styles. daysRemainingWarning,
+                styles.daysRemainingCard,
+                isExpiringSoon && styles.daysRemainingWarning,
               ]}
             >
               <View style={styles.daysRemainingContent}>
@@ -341,7 +390,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             onPress={handleDeleteAccount}
           >
             <MaterialCommunityIcons name="chevron-left" size={22} color="#CBD5E0" />
-            <Text style={[styles.actionButtonText, styles. dangerText]}>
+            <Text style={[styles.actionButtonText, styles.dangerText]}>
               حذف الحساب نهائياً
             </Text>
             <MaterialCommunityIcons name="delete-forever" size={22} color="#E53E3E" />
@@ -379,7 +428,7 @@ const InfoRow = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex:  1,
+    flex: 1,
     backgroundColor: '#f5f5f5',
   },
   scrollView: {
@@ -389,7 +438,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   loadingContainer: {
-    flex:  1,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
@@ -414,21 +463,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Almarai-Bold',
     color: '#2D3748',
-    textAlign:  'center',
+    textAlign: 'center',
   },
   retryButton: {
     marginTop: 20,
     backgroundColor: '#FF9800',
     paddingHorizontal: 24,
-    paddingVertical:  12,
-    borderRadius:  12,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  retryButtonText:  {
+  retryButtonText: {
     color: '#fff',
     fontSize: 14,
     fontFamily: 'Almarai-Bold',
   },
-  header:  {
+  header: {
     backgroundColor: '#FF9800',
     paddingTop: 30,
     paddingBottom: 30,
@@ -439,7 +488,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginHorizontal: 16,
   },
-  name:  {
+  name: {
     fontSize: 18,
     fontFamily: 'Almarai-Bold',
     color: '#FFF',
@@ -450,8 +499,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 20,
-    paddingVertical:  8,
-    borderRadius:  20,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginBottom: 8,
     alignItems: 'center',
     gap: 6,
@@ -459,7 +508,7 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontSize: 14,
     color: '#FF9800',
-    fontFamily:  'Almarai-Bold',
+    fontFamily: 'Almarai-Bold',
   },
   locationContainer: {
     flexDirection: 'row-reverse',
@@ -467,7 +516,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     gap: 4,
   },
-  location:  {
+  location: {
     fontSize: 14,
     color: '#FFF',
     fontFamily: 'Almarai-Regular',
@@ -478,14 +527,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderRadius: 15,
     padding: 20,
-    ... Platform.select({
+    ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity:  0.1,
+        shadowOpacity: 0.1,
         shadowRadius: 8,
       },
-      android:  {
+      android: {
         elevation: 3,
       },
     }),
@@ -495,8 +544,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     paddingBottom: 12,
-    borderBottomWidth:  2,
-    borderBottomColor:  '#E2E8F0',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E2E8F0',
     gap: 8,
   },
   sectionTitle: {
@@ -510,22 +559,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor:  '#F7FAFC',
-    gap:  12,
+    borderBottomColor: '#F7FAFC',
+    gap: 12,
   },
   infoContent: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'flex-end',
   },
-  label:  {
+  label: {
     fontSize: 13,
     color: '#718096',
     marginBottom: 4,
     textAlign: 'right',
     fontFamily: 'Almarai-Regular',
   },
-  value:  {
+  value: {
     fontSize: 14,
     color: '#2D3748',
     fontFamily: 'Almarai-Bold',
@@ -546,23 +595,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Almarai-Bold',
   },
-  subscriptionHeader:  {
+  subscriptionHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
     paddingBottom: 15,
     borderBottomWidth: 2,
-    borderBottomColor:  '#E2E8F0',
+    borderBottomColor: '#E2E8F0',
   },
   packageBadge: {
     flexDirection: 'row-reverse',
     backgroundColor: '#FF9800',
     paddingHorizontal: 16,
-    paddingVertical:  8,
-    borderRadius:  12,
-    alignItems:  'center',
-    gap:  6,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 6,
   },
   packageText: {
     fontSize: 18,
@@ -612,9 +661,9 @@ const styles = StyleSheet.create({
   daysRemainingValue: {
     fontSize: 18,
     color: '#48BB78',
-    fontFamily:  'Almarai-Bold',
+    fontFamily: 'Almarai-Bold',
   },
-  daysRemainingValueWarning:  {
+  daysRemainingValueWarning: {
     color: '#E53E3E',
   },
   subscriptionActions: {
@@ -637,7 +686,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Almarai-Bold',
   },
-  upgradeButton:  {
+  upgradeButton: {
     flex: 1,
     flexDirection: 'row-reverse',
     backgroundColor: '#FF9800',
@@ -653,7 +702,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Almarai-Bold',
   },
   actionButton: {
-    flexDirection:  'row-reverse',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     backgroundColor: '#F7FAFC',
     paddingVertical: 14,
@@ -664,7 +713,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     flex: 1,
-    fontSize:  14,
+    fontSize: 14,
     color: '#2D3748',
     fontFamily: 'Almarai-Bold',
     textAlign: 'right',

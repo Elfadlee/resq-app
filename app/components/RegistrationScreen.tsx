@@ -16,12 +16,12 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-    type RegistrationScreenProps = {
-        initialData?: any;
-        isSocialSignup?: boolean;   // 👈 جديد
-        onNext: (data: any) => void;
-        onBackToLogin: () => void;
-    };
+type RegistrationScreenProps = {
+    initialData?: any;
+    isSocialSignup?: boolean;   // 👈 جديد
+    onNext: (data: any) => void;
+    onBackToLogin: () => void;
+};
 
 const JOBS = [
     'كهربائي',
@@ -76,7 +76,7 @@ export default function RegistrationScreen({
 }: RegistrationScreenProps) {
 
 
-    const [mobile, setMobile] = useState(initialData?.mobile?. replace('+964', '') || '');
+    const [mobile, setMobile] = useState(initialData?.mobile?.replace('+964', '') || '');
     const [email, setEmail] = useState(initialData?.email || '');
     const [description, setDescription] = useState(initialData?.description || '');
     const [password, setPassword] = useState('');
@@ -97,16 +97,16 @@ export default function RegistrationScreen({
 
     const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
 
-      React.useEffect(() => {
-            if (!initialData) return;
+    React.useEffect(() => {
+        if (!initialData) return;
 
-            setName(initialData.name || name || "");   // ← يعبّي الاسم إذا وصل
-            setEmail(initialData.email || "");
-            setMobile(initialData.mobile?.replace("+964", "") || "");
-            setJobTitle(initialData.jobTitle || "");
-            setArea(initialData.area || "");
-            setDescription(initialData.description || "");
-            }, [initialData]);
+        setName(initialData.name || name || "");   // ← يعبّي الاسم إذا وصل
+        setEmail(initialData.email || "");
+        setMobile(initialData.mobile?.replace("+964", "") || "");
+        setJobTitle(initialData.jobTitle || "");
+        setArea(initialData.area || "");
+        setDescription(initialData.description || "");
+    }, [initialData]);
 
 
 
@@ -143,7 +143,7 @@ export default function RegistrationScreen({
     const handleNext = async () => {
         Keyboard.dismiss();
 
-        if (! name. trim()) {
+        if (!name.trim()) {
             Alert.alert('خطأ', 'يرجى إدخال الاسم');
             return;
         }
@@ -155,11 +155,11 @@ export default function RegistrationScreen({
             Alert.alert('خطأ', 'يرجى اختيار المنطقة');
             return;
         }
-        if (!mobile. trim() || mobile.length < 10) {
-            Alert. alert('خطأ', 'يرجى إدخال رقم جوال صحيح (10 أرقام)');
+        if (!mobile.trim() || mobile.length < 10) {
+            Alert.alert('خطأ', 'يرجى إدخال رقم جوال صحيح (10 أرقام)');
             return;
         }
-        if (! password. trim() || password.length < 8) {
+        if (!password.trim() || password.length < 8) {
             Alert.alert('خطأ', 'يرجى إدخال كلمة المرور (8 أرقام على الأقل)');
             return;
         }
@@ -179,26 +179,29 @@ export default function RegistrationScreen({
         const englishPassword = convertArabicToEnglish(password);
         const englishMobile = convertArabicToEnglish(mobile);
         const draftData = {
-           name: name.trim(),
-          jobTitle,
-           area,
-           mobile: '+964' + englishMobile,
-           email: email.trim(),
-           description: description.trim(),
-           password: englishPassword,
-         };
-        
-          try {
-                    await AsyncStorage.setItem(
-                        'userRegistrationDraft',
-                        JSON.stringify(draftData)
-                    );
-                    } catch (err) {
-                    console.log('Storage error', err);
-                    } finally {
-                    // 👈 سيتم التنفيذ حتى لو التخزين فشل
-                    onNext(draftData);
-                    }
+            name: name.trim(),
+            jobTitle,
+            area,
+            mobile: '+964' + englishMobile,
+            email: email.trim(),
+            description: description.trim(),
+            password: englishPassword,
+        };
+
+        try {
+            await AsyncStorage.setItem(
+                'userRegistrationDraft',
+                JSON.stringify(draftData)
+            );
+        } catch (err) {
+            console.log('Storage error', err);
+        } finally {
+
+            onNext({
+                ...draftData,
+                signupType: "manual"
+            });
+        }
     };
 
     return (
@@ -208,7 +211,7 @@ export default function RegistrationScreen({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
         >
-            <View style={styles. formCard}>
+            <View style={styles.formCard}>
                 <View style={styles.header}>
                     <MaterialCommunityIcons name="account-plus" size={40} color="#FF9800" />
                     <Text style={styles.headerTitle}>تسجيل حساب جديد</Text>
@@ -244,17 +247,17 @@ export default function RegistrationScreen({
                             }}
                             activeOpacity={0.7}
                         >
-                            <Text style={[styles.dropdownText, ! jobTitle && styles.placeholder]}>
+                            <Text style={[styles.dropdownText, !jobTitle && styles.placeholder]}>
                                 {jobTitle || 'اختر المهنة'}
                             </Text>
-                            <MaterialCommunityIcons name="briefcase" size={20} color="#FF9800" style={styles. icon} />
+                            <MaterialCommunityIcons name="briefcase" size={20} color="#FF9800" style={styles.icon} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>المنطقة</Text>
                         <TouchableOpacity
-                            style={[styles.inputWrapper, focusedField === 'area' && styles. inputWrapperFocused]}
+                            style={[styles.inputWrapper, focusedField === 'area' && styles.inputWrapperFocused]}
                             onPress={() => {
                                 Keyboard.dismiss();
                                 setAreaMenuVisible(true);
@@ -262,7 +265,7 @@ export default function RegistrationScreen({
                             }}
                             activeOpacity={0.7}
                         >
-                            <Text style={[styles.dropdownText, ! area && styles.placeholder]}>
+                            <Text style={[styles.dropdownText, !area && styles.placeholder]}>
                                 {area || 'اختر المنطقة'}
                             </Text>
                             <MaterialCommunityIcons name="map-marker" size={20} color="#FF9800" style={styles.icon} />
@@ -271,7 +274,7 @@ export default function RegistrationScreen({
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>رقم الجوال</Text>
-                        <View style={[styles.inputWrapper, focusedField === 'mobile' && styles. inputWrapperFocused]}>
+                        <View style={[styles.inputWrapper, focusedField === 'mobile' && styles.inputWrapperFocused]}>
                             <View style={styles.mobileInputContainer}>
                                 <RNTextInput
                                     ref={mobileInputRef}
@@ -317,8 +320,8 @@ export default function RegistrationScreen({
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={styles. label}>كلمة المرور الجديدة</Text>
-                        <View style={[styles.inputWrapper, focusedField === 'password' && styles. inputWrapperFocused]}>
+                        <Text style={styles.label}>كلمة المرور الجديدة</Text>
+                        <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperFocused]}>
                             <View style={styles.passwordInputContainer}>
                                 <TouchableOpacity
                                     onPress={() => setShowPassword(!showPassword)}
@@ -326,7 +329,7 @@ export default function RegistrationScreen({
                                     activeOpacity={0.7}
                                 >
                                     <MaterialCommunityIcons
-                                        name={showPassword ?  'eye-off' : 'eye'}
+                                        name={showPassword ? 'eye-off' : 'eye'}
                                         size={20}
                                         color="#666"
                                     />
@@ -348,7 +351,7 @@ export default function RegistrationScreen({
                             <MaterialCommunityIcons name="lock" size={20} color="#FF9800" style={styles.icon} />
                         </View>
                         <Text style={styles.helperText}>
-                            {password. length}/12 • استخدم 12 رقم فقط (عربي أو إنجليزي)
+                            {password.length}/12 • استخدم 12 رقم فقط (عربي أو إنجليزي)
                         </Text>
                     </View>
 
@@ -358,7 +361,7 @@ export default function RegistrationScreen({
                             style={[
                                 styles.inputWrapper,
                                 focusedField === 'confirmPassword' && styles.inputWrapperFocused,
-                                confirmPassword. length > 0 && password !== confirmPassword && styles.inputWrapperError,
+                                confirmPassword.length > 0 && password !== confirmPassword && styles.inputWrapperError,
                             ]}
                         >
                             <View style={styles.passwordInputContainer}>
@@ -403,10 +406,10 @@ export default function RegistrationScreen({
                             />
                         </View>
                         {confirmPassword.length > 0 && password !== confirmPassword && (
-                            <Text style={styles. errorText}>كلمة المرور غير متطابقة</Text>
+                            <Text style={styles.errorText}>كلمة المرور غير متطابقة</Text>
                         )}
                         {confirmPassword.length > 0 && password === confirmPassword && (
-                            <Text style={styles. successText}>✓ كلمة المرور متطابقة</Text>
+                            <Text style={styles.successText}>✓ كلمة المرور متطابقة</Text>
                         )}
                     </View>
 
@@ -416,7 +419,7 @@ export default function RegistrationScreen({
                             style={[
                                 styles.inputWrapper,
                                 styles.textAreaWrapper,
-                                focusedField === 'description' && styles. inputWrapperFocused,
+                                focusedField === 'description' && styles.inputWrapperFocused,
                             ]}
                         >
                             <RNTextInput
@@ -470,7 +473,7 @@ export default function RegistrationScreen({
                 }}
             >
                 <TouchableOpacity
-                    style={styles. modalOverlay}
+                    style={styles.modalOverlay}
                     activeOpacity={1}
                     onPress={() => {
                         setJobMenuVisible(false);
@@ -521,7 +524,7 @@ export default function RegistrationScreen({
                         setFocusedField(null);
                     }}
                 >
-                    <View style={styles. modalContentBottom}>
+                    <View style={styles.modalContentBottom}>
                         <View style={styles.modalHandle} />
                         <Text style={styles.modalTitle}>اختر المنطقة</Text>
                         <FlatList
@@ -557,7 +560,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
     },
     scrollContent: {
-        flexGrow:  1,
+        flexGrow: 1,
         paddingBottom: 32,
     },
     formCard: {
@@ -565,14 +568,14 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: '#fff',
         padding: 24,
-        ... Platform.select({
+        ...Platform.select({
             ios: {
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity:  0.1,
+                shadowOpacity: 0.1,
                 shadowRadius: 12,
             },
-            android:  {
+            android: {
                 elevation: 4,
             },
         }),
@@ -595,7 +598,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     label: {
-        fontSize:  14,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#333',
         textAlign: 'right',
@@ -607,7 +610,7 @@ const styles = StyleSheet.create({
         borderColor: '#e0e0e0',
         borderRadius: 12,
         backgroundColor: '#fff',
-        paddingHorizontal:  12,
+        paddingHorizontal: 12,
         minHeight: 56,
     },
     inputWrapperFocused: {
@@ -616,7 +619,7 @@ const styles = StyleSheet.create({
     },
     inputWrapperError: {
         borderColor: '#f44336',
-        borderWidth:  2,
+        borderWidth: 2,
     },
     input: {
         flex: 1,
@@ -638,12 +641,12 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         fontFamily: 'Almarai-Regular',
-        color:  '#1a1a1a',
+        color: '#1a1a1a',
         paddingVertical: 12,
         textAlign: 'right',
     },
     mobilePrefix: {
-        fontSize:  14,
+        fontSize: 14,
         fontFamily: 'Almarai-Bold',
         color: '#666',
         marginRight: 8,
@@ -668,8 +671,8 @@ const styles = StyleSheet.create({
     },
     dropdownText: {
         flex: 1,
-        fontSize:  14,
-        fontFamily:  'Almarai-Regular',
+        fontSize: 14,
+        fontFamily: 'Almarai-Regular',
         color: '#1a1a1a',
         textAlign: 'right',
     },
@@ -695,7 +698,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Almarai-Regular',
         color: '#4CAF50',
         textAlign: 'right',
-        marginTop:  4,
+        marginTop: 4,
     },
     textAreaWrapper: {
         alignItems: 'flex-start',
@@ -717,7 +720,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor:  '#e0e0e0',
+        backgroundColor: '#e0e0e0',
         marginVertical: 8,
     },
     buttonContainer: {
@@ -745,7 +748,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 14,
         flexDirection: 'row-reverse',
-        alignItems:  'center',
+        alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
     },
@@ -757,7 +760,7 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent:  'flex-end',
+        justifyContent: 'flex-end',
     },
     modalContentBottom: {
         backgroundColor: '#fff',
@@ -767,7 +770,7 @@ const styles = StyleSheet.create({
         maxHeight: '70%',
     },
     modalHandle: {
-        width:  40,
+        width: 40,
         height: 4,
         backgroundColor: '#ddd',
         borderRadius: 2,
@@ -785,7 +788,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical:  12,
+        paddingVertical: 12,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',

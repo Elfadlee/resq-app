@@ -102,7 +102,7 @@ export default function ProfileEdit({ navigation, route }: any) {
     };
 
     try {
-      // 🟡 تحديث في Firestore إذا كان لدينا ID
+
       if (profile.id) {
         const userRef = doc(db, "users", profile.id);
         await updateDoc(userRef, {
@@ -117,13 +117,11 @@ export default function ProfileEdit({ navigation, route }: any) {
         });
       }
 
-      // 🔵 حفظ في Storage - userProfile
       await storage. setObject('userProfile', updatedProfile);
 
-      // 🔵 حفظ في Storage - currentUser
       await storage.setObject('currentUser', updatedProfile);
 
-      // 🔵 تحديث في allUsers إذا موجود
+
       const allUsers = await storage.getObject<any[]>('allUsers') || [];
       const userIndex = allUsers.findIndex((u: any) => u.id === profile.id);
       if (userIndex !== -1) {

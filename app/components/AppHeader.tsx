@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { View, StyleSheet, StatusBar, Image, Text } from 'react-native';  // لاحظ Text هنا فقط
+import { View, StyleSheet, StatusBar, Image, Text, Platform } from 'react-native';  // لاحظ Text هنا فقط
 import { IconButton, useTheme } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 type Props = {
   onMenuOpen:  () => void;
@@ -9,6 +10,8 @@ type Props = {
 
 export default function AppHeader({ onMenuOpen }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+
 
   return (
     <>
@@ -20,7 +23,10 @@ export default function AppHeader({ onMenuOpen }: Props) {
 
       <View style={[
         styles.container,
-        { backgroundColor: theme.colors.primary },
+        { backgroundColor: theme.colors.primary,
+          paddingTop: Platform.OS === 'ios' ? insets.top - 15 : 4
+
+         },
       ]}>
         {/* MENU */}
         <IconButton
@@ -56,6 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     overflow: 'hidden',
     width: '100%',
+    display: 'flex',
   },
   logoContainer: {
     flex: 1,
@@ -83,6 +90,8 @@ const styles = StyleSheet.create({
   logo: {
     width: 44,
     height: 44,
+    alignItems: 'flex-end',
+    
   },
   title:  {
     textAlign: 'center',

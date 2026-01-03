@@ -1,14 +1,109 @@
+// import * as AppleAuthentication from "expo-apple-authentication";
+// import { OAuthProvider, signInWithCredential } from "firebase/auth";
+// import { Alert, Platform, Text } from "react-native";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { auth } from "../services/firestore";
+
+// interface AppleLoginButtonProps {
+//   onSocialLogin?: (draft: any) => void;
+// }
+
+// export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProps) {
+
+//   if (Platform.OS === "android") return null;
+
+//   const handleAppleLogin = async () => {
+//     try {
+
+//       const apple = await AppleAuthentication.signInAsync({
+//         requestedScopes: [
+//           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+//           AppleAuthentication.AppleAuthenticationScope.EMAIL,
+//         ],
+//       });
+
+//       if (!apple.identityToken) {
+//         Alert.alert("فشل تسجيل الدخول", "Apple لم يرجّع identityToken");
+//         return;
+//       }
+
+    
+//       let fullName =
+//         apple.fullName?.givenName && apple.fullName?.familyName
+//           ? `${apple.fullName.givenName} ${apple.fullName.familyName}`
+//           : "";
+
+    
+//       if (fullName) {
+//         await AsyncStorage.setItem("savedAppleName", fullName);
+//       } else {
+     
+//         const stored = await AsyncStorage.getItem("savedAppleName");
+//         fullName = stored || "";
+//       }
+
+//       const provider = new OAuthProvider("apple.com");
+//       const credential = provider.credential({
+//         idToken: apple.identityToken,
+//       });
+
+//       const userCredential = await signInWithCredential(auth, credential);
+//       const user = userCredential.user;
+
+     
+//       const draft = {
+//         name: fullName || "",
+//         email: apple.email || user.email || "",
+//         mobile: "",
+//         jobTitle: "",
+//         area: "",
+//         description: "",
+//       };
+
+//       onSocialLogin?.(draft);
+
+//       Alert.alert(
+//         "إكمال التسجيل",
+//         "يرجى إكمال بيانات حسابك قبل المتابعة"
+//       );
+//     }
+
+//     catch (err: any) {
+//       if (err?.code === "ERR_CANCELED") return;
+//       console.log("APPLE ERROR:", err);
+//       Alert.alert("خطأ في تسجيل Apple", err?.message ?? "Unknown error");
+//     }
+//   };
+
+//   return (
+//     <>
+//     <AppleAuthentication.AppleAuthenticationButton
+//       buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+//       buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+//       cornerRadius={6}
+//       style={{ width: 220, height: 48, marginVertical: 8, alignSelf: "center" }}
+//       onPress={handleAppleLogin}
+//     />
+//     <Text style={{ textAlign: "center", marginVertical: 4, color: "#666",
+//     fontFamily: "Almarai" }}>تسجيل الدخول باستخدام Apple</Text>
+//     </>
+    
+//   );
+// }
+
 import * as AppleAuthentication from "expo-apple-authentication";
 import { OAuthProvider, signInWithCredential } from "firebase/auth";
-import { Alert, Platform } from "react-native";
+import { Alert, Platform, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "../services/firestore";
+import { auth, db } from "../services/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AppleLoginButtonProps {
   onSocialLogin?: (draft: any) => void;
+  onGoToProfile?: () => void;   // 👈 تمت إضافة هذا
 }
 
-export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProps) {
+export default function AppleLoginButton({ onSocialLogin, onGoToProfile }: AppleLoginButtonProps) {
 
   if (Platform.OS === "android") return null;
 
@@ -27,17 +122,14 @@ export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProp
         return;
       }
 
-      // 🟢 استخراج الاسم — Apple يرسله فقط أول تسجيل
       let fullName =
         apple.fullName?.givenName && apple.fullName?.familyName
           ? `${apple.fullName.givenName} ${apple.fullName.familyName}`
           : "";
 
-      // إذا وصل اسم لأول مرة → نخزّنه
       if (fullName) {
         await AsyncStorage.setItem("savedAppleName", fullName);
       } else {
-        // إذا ما رجع الاسم لاحقًا → نقرأه من التخزين
         const stored = await AsyncStorage.getItem("savedAppleName");
         fullName = stored || "";
       }
@@ -50,7 +142,30 @@ export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProp
       const userCredential = await signInWithCredential(auth, credential);
       const user = userCredential.user;
 
-      // 📦 تجهيز بيانات التسجيل للفورم
+
+      const uid = user.uid;
+
+      // 🔎 فحص هل المستخدم موجود مسبقًا في Firestore
+      const userRef = doc(db, "users", uid);
+      const snap = await getDoc(userRef);
+      
+      console.log("UID =", uid);
+      console.log("snap.exists =", snap.exists());
+      console.log("user data =", snap.data());
+
+      if (snap.exists()) {
+
+        const data = snap.data();
+
+        // OPTIONAL — إذا عنده اشتراك مفعّل نقدر نتحقق هنا
+        // if (data.subscription?.active === true) { ... }
+
+        // 👈 توجيه مباشر للبروفايل
+        onGoToProfile?.();
+        return;
+      }
+
+      // 👇 مستخدم جديد — نرسل بيانات أولية للتسجيل
       const draft = {
         name: fullName || "",
         email: apple.email || user.email || "",
@@ -58,14 +173,12 @@ export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProp
         jobTitle: "",
         area: "",
         description: "",
+        isSocialSignup: true,
       };
 
       onSocialLogin?.(draft);
 
-      Alert.alert(
-        "إكمال التسجيل",
-        "يرجى إكمال بيانات حسابك قبل المتابعة"
-      );
+      Alert.alert("إكمال التسجيل", "يرجى إكمال بيانات حسابك قبل المتابعة");
     }
 
     catch (err: any) {
@@ -76,12 +189,23 @@ export default function AppleLoginButton({ onSocialLogin }: AppleLoginButtonProp
   };
 
   return (
-    <AppleAuthentication.AppleAuthenticationButton
-      buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-      cornerRadius={6}
-      style={{ width: 220, height: 48, marginVertical: 8 }}
-      onPress={handleAppleLogin}
-    />
+    <>
+      <AppleAuthentication.AppleAuthenticationButton
+        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+        cornerRadius={6}
+        style={{ width: 220, height: 48, marginVertical: 8, alignSelf: "center" }}
+        onPress={handleAppleLogin}
+      />
+
+      <Text style={{
+        textAlign: "center",
+        marginVertical: 4,
+        color: "#666",
+        fontFamily: "Almarai"
+      }}>
+        تسجيل الدخول باستخدام Apple
+      </Text>
+    </>
   );
 }

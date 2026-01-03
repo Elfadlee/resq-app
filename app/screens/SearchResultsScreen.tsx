@@ -3,14 +3,11 @@ import { View, FlatList, ActivityIndicator, StyleSheet, Text } from 'react-nativ
 import { useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AppHeader from './components/AppHeader';
-import AppFooter from './components/AppFooter';
-import ServiceCard from './components/ServiceCard';
+import ServiceCard from '../components/ServiceCard';
 
 import { getDocs, collection } from "firebase/firestore";
-import { db } from "./services/firestore";
+import { db } from "../services/firestore";
 
-// دالة تساعدك تضمن القيمة سترينج دائماً
 function safeString(val: any) {
   if (typeof val === "string") return val;
   if (typeof val === "number") return String(val);
@@ -37,27 +34,40 @@ type User = {
   };
 };
 
-export default function SearchResultsScreen() {
+type SearchResultsScreenProps = {
+  jobTitle?: string;
+  area?: string;
+  onBack?: () => void;
+};
+
+export default function SearchResultsScreen(props: SearchResultsScreenProps) {
   const params = useLocalSearchParams();
 
-  // إصلاح حساس جداً! لكي تتعامل مع جميع أنواع params
+  // 🟢 نستخدم قيم MainScreen أولاً — ثم ن fallback للـ params
   const jobTitle =
-    typeof params.jobTitle === "string"
+    props.jobTitle ??
+    (typeof params.jobTitle === "string"
       ? params.jobTitle
-      : (Array.isArray(params.jobTitle) && typeof params.jobTitle[0] === "string"
-        ? params.jobTitle[0]
-        : "");
+      : (Array.isArray(params.jobTitle) &&
+         typeof params.jobTitle[0] === "string"
+          ? params.jobTitle[0]
+          : "")
+    );
 
   const area =
-    typeof params.area === "string"
+    props.area ??
+    (typeof params.area === "string"
       ? params.area
-      : (Array.isArray(params.area) && typeof params.area[0] === "string"
-        ? params.area[0]
-        : "");
+      : (Array.isArray(params.area) &&
+         typeof params.area[0] === "string"
+          ? params.area[0]
+          : "")
+    );
 
   // أمان زائد لضمان أنها سترينج
   const jobTitleSafe = safeString(jobTitle);
   const areaSafe = safeString(area);
+
 
   const [results, setResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,22 +90,38 @@ export default function SearchResultsScreen() {
         (!jobTitleSafe || normalize(jobTitleSafe) === "") &&
         (!areaSafe || normalize(areaSafe) === "");
 
-      const filtered = paramsAreEmpty
-        ? users
-        : users.filter(u =>
-            (!jobTitleSafe || normalize(u.jobTitle).includes(normalize(jobTitleSafe))) &&
-            (!areaSafe || normalize(u.area).includes(normalize(areaSafe)))
-          );
+      // 🔹 دالة توحيد النص — تمنع اختلاف المسافات / الحروف
+      const normalizeExact = (v?: any) =>
+        safeString(v).replace(/\s+/g, " ").trim().toLowerCase();
 
-      // ترتيب حسب الباقة
+      const jt = normalizeExact(jobTitleSafe);
+      const ar = normalizeExact(areaSafe);
+
+      // 🔹 فلترة مطابقة تامة للمهنة + المنطقة
+      const filtered = users.filter(u => {
+        const uj = normalizeExact(u.jobTitle);
+        const ua = normalizeExact(u.area);
+
+        const jobOk = !jt || uj === jt;
+        const areaOk = !ar || ua === ar;
+
+        // 🔹 لا نعرض إلا المشتركين الفعّالين
+        const active = u.subscription?.isActive === true;
+
+        return jobOk && areaOk && active;
+      });
+
+      // 🔹 ترتيب الباقات: Business → Pro → Basic
       const order = { business: 0, pro: 1, basic: 2 };
+
       const sorted = filtered.sort((a, b) => {
-        const pa = safeString(a.subscription?.package) || 'basic';
-        const pb = safeString(b.subscription?.package) || 'basic';
+        const pa = (safeString(a.subscription?.package) || "basic") as keyof typeof order;
+        const pb = (safeString(b.subscription?.package) || "basic") as keyof typeof order;
         return (order[pa] ?? 3) - (order[pb] ?? 3);
       });
 
       setResults(sorted);
+
     } catch (err) {
       setResults([]);
     } finally {
@@ -120,48 +146,48 @@ export default function SearchResultsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <AppHeader onMenuOpen={() => { /* handle menu open here */ }} />
-      <View style={styles.wrap}>
-        <View style={styles.headerBox}>
-          <Icon name="account-search" color="#25D366" size={26} />
-          <Text style={styles.pageTitle}>
-            نتائج البحث
-          </Text>
-          {(jobTitleSafe || areaSafe) ? (
-            <Text style={styles.subTitle}>
-              {jobTitleSafe ? `المهنة: ${jobTitleSafe}` : ''}
-              {jobTitleSafe && areaSafe ? ' - ' : ''}
-              {areaSafe ? `المنطقة: ${areaSafe}` : ''}
-            </Text>
-          ) : null}
-        </View>
 
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#25D366" />
-            <Text style={styles.text}>جاري تحميل النتائج…</Text>
-          </View>
-        ) : results.length === 0 ? (
-          <View style={styles.center}>
-            <Icon name="emoticon-sad-outline" size={66} color="#FF9800" />
-            <Text style={styles.noResultTitle}>لا توجد نتائج مطابقة لبحثك حاليًا</Text>
-            <Text style={styles.noResultSub}>
-              يمكنك تعديل خيارات البحث أو العودة للصفحة الرئيسية
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={results}
-            keyExtractor={item => safeString(item.id)}
-            renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 80 }}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+
+    <View style={styles.wrap}>
+      <View style={styles.headerBox}>
+        <Icon name="account-search" color="#25D366" size={26} />
+        <Text style={styles.pageTitle}>
+          نتائج البحث
+        </Text>
+        {(jobTitleSafe || areaSafe) ? (
+          <Text style={styles.subTitle}>
+            {jobTitleSafe ? `المهنة: ${jobTitleSafe}` : ''}
+            {jobTitleSafe && areaSafe ? ' - ' : ''}
+            {areaSafe ? `المنطقة: ${areaSafe}` : ''}
+          </Text>
+        ) : null}
       </View>
-      <AppFooter />
-    </SafeAreaView>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#25D366" />
+          <Text style={styles.text}>جاري تحميل النتائج…</Text>
+        </View>
+      ) : results.length === 0 ? (
+        <View style={styles.center}>
+          <Icon name="emoticon-sad-outline" size={66} color="#FF9800" />
+          <Text style={styles.noResultTitle}>لا توجد نتائج مطابقة لبحثك حاليًا</Text>
+          <Text style={styles.noResultSub}>
+            يمكنك تعديل خيارات البحث أو العودة للصفحة الرئيسية
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={item => safeString(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 80 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
+
+
   );
 }
 

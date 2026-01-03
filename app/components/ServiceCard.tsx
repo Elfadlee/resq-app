@@ -37,15 +37,19 @@ export default function ServiceCard({
       onPress={onPress}
     >
       <Card.Content style={styles.content}>
+
         {/* RIGHT – NAME + JOB */}
         <View style={styles.rightSection}>
           <Text style={styles.name} numberOfLines={1}>
             {name ? String(name) : ''}
           </Text>
+
           <View style={styles.jobPill}>
             <Text style={styles.jobTitle} numberOfLines={1}>
               {jobTitle ? String(jobTitle) : ''}
             </Text>
+
+
           </View>
         </View>
 
@@ -79,7 +83,7 @@ export default function ServiceCard({
             </Text>
           </View>
         </View>
-        {/* LEFT – WHATSAPP */}
+ 
       </Card.Content>
     </Card>
   );
