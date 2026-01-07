@@ -11,12 +11,57 @@ import MainScreen from "./screens/MainScreen";
 
 
 
+
+
 export default function RootLayout() {
 
   const fontsLoaded = useAppFonts();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentScreen, setCurrentScreen] =
     useState<"main" | "contact" | "profile" | "search">("main");
+
+useEffect(() => {
+  let InAppPurchases: any;
+
+  if (Platform.OS !== "ios") {
+    console.log("IAP disabled on this platform");
+    return;
+  }
+
+  (async () => {
+    try {
+      InAppPurchases = await import("expo-in-app-purchases");
+      await InAppPurchases.connectAsync();
+
+      InAppPurchases.setPurchaseListener(
+        async ({ results }: { results: any[] }) => {
+          if (!results) return;
+
+          for (const purchase of results) {
+            if (!purchase.transactionReceipt) continue;
+
+            console.log("📜 RECEIPT RECEIVED");
+
+            await InAppPurchases.finishTransactionAsync(
+              purchase,
+              true
+            );
+          }
+        }
+      );
+
+      console.log("✔️ IAP Ready");
+    } catch (err) {
+      console.log("❌ IAP init failed", err);
+    }
+  })();
+
+  return () => {
+    InAppPurchases?.disconnectAsync?.();
+  };
+}, []);
+
+
 
 
   if (!fontsLoaded) {

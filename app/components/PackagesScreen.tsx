@@ -16,6 +16,26 @@ import {
 import { db } from '../services/firestore';
 import { auth } from '../services/firestore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { buy } from "../services/iap";
+
+
+const PRODUCT_MAP = {
+  basic: {
+    monthly: "rizq.basic.monthly.plan",
+    quarterly: "rizq.basic.quarterly",
+  },
+  pro: {
+    monthly: "rizq.pro.monthly",
+    quarterly: "rizq.pro.quarterly",
+  },
+  business: {
+    monthly: "rizq.business.monthly",
+    quarterly: "rizq.business.quarterly",
+  },
+  trial_auto_renew: {
+    quarterly: "rizq.basic.quarterly_free"
+  }
+}
 
 type PackagesScreenProps = {
   registrationData: any;
@@ -35,6 +55,21 @@ type SubscriptionPackage = {
 };
 
 const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
+  {
+    id: 'trial_auto_renew',
+    name: 'Trial 3 Months',
+    nameAr: '3 شهور مجاناً',
+    icon: 'gift',
+    color: '#4CAF50',
+    monthlyPrice: 0,
+    quarterlyPrice: 0,
+    features: [
+      '3 شهور مجانا',
+      'يتجدد تلقائياً ب25 دولار كل 3 شهور بعد انتهاء التجربة',
+      'إلغاء الاشتراك في أي وقت',
+      'جميع مميزات باقة احترافي',
+    ],
+  },
   {
     id: 'basic',
     name: 'Basic',
@@ -109,17 +144,42 @@ export default function PackagesScreen({
     }
 
     const pkg = SUBSCRIPTION_PACKAGES.find(p => p.id === selectedPackage);
+
     const price =
-      selectedDuration === 'monthly'
-        ? pkg?.monthlyPrice
-        : pkg?.quarterlyPrice;
+      selectedPackage === 'trial_auto_renew'
+        ? 0
+        : selectedDuration === 'monthly'
+          ? pkg?.monthlyPrice
+          : pkg?.quarterlyPrice;
 
     const startAt = new Date();
     const endAt = new Date(startAt);
 
-    selectedDuration === 'monthly'
-      ? endAt.setMonth(endAt.getMonth() + 1)
-      : endAt.setMonth(endAt.getMonth() + 3);
+    if (selectedPackage === 'trial_auto_renew') {
+      endAt.setMonth(endAt.getMonth() + 3);
+    } else {
+      selectedDuration === 'monthly'
+        ? endAt.setMonth(endAt.getMonth() + 1)
+        : endAt.setMonth(endAt.getMonth() + 3);
+    }
+
+   if (pkg?.id !== "trial_auto_renew") {
+      const productMapEntry = PRODUCT_MAP[pkg!.id as keyof typeof PRODUCT_MAP];
+      const productId =
+        selectedDuration in productMapEntry
+          ? productMapEntry[selectedDuration as keyof typeof productMapEntry]
+          : undefined;
+
+      if (!productId) {
+        Alert.alert('خطأ', 'نوع الاشتراك غير متوفر لهذه الباقة');
+        return;
+      }
+
+      console.log("🛒 Purchasing:", productId);
+      await buy(productId);
+    }
+
+
 
     const userData = {
       ...registrationData,
@@ -130,7 +190,8 @@ export default function PackagesScreen({
         price: price || 7,
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
-        isActive: true,
+        isActive: false,
+        status: "pending",
       },
       status: { approved: true, suspended: false },
       metadata: {
@@ -156,8 +217,6 @@ export default function PackagesScreen({
         await setDoc(doc(db, "users", userId), userData, { merge: true });
       }
 
-
-
       const cachedUser = {
         id: userId,
         uid: userId,
@@ -173,9 +232,6 @@ export default function PackagesScreen({
 
       await AsyncStorage.setItem("currentUser", JSON.stringify(cachedUser));
       await AsyncStorage.setItem("userProfile", JSON.stringify(cachedUser));
-
-      // … بقية الكود كما هو
-
 
       await setDoc(
         doc(db, "lookup_professions", registrationData.jobTitle),
@@ -204,7 +260,6 @@ export default function PackagesScreen({
       Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
     }
   };
-
 
   return (
     <ScrollView
@@ -280,10 +335,20 @@ export default function PackagesScreen({
             <View style={styles.packagesContainer}>
               {SUBSCRIPTION_PACKAGES.map((pkg) => {
                 const isSelected = selectedPackage === pkg.id;
-                const price =
-                  selectedDuration === 'monthly'
-                    ? pkg.monthlyPrice
-                    : pkg.quarterlyPrice;
+                // حدد السعر والنص حسب نوع الباقة
+                const displayedPrice =
+                  pkg.id === 'trial_auto_renew'
+                    ? "مجانا"
+                    : selectedDuration === 'monthly'
+                      ? `$${pkg.monthlyPrice}`
+                      : `$${pkg.quarterlyPrice}`;
+
+                const displayedPeriod =
+                  pkg.id === 'trial_auto_renew'
+                    ? '3 شهور'
+                    : selectedDuration === 'monthly'
+                      ? 'شهر'
+                      : '3 أشهر';
 
                 return (
                   <TouchableOpacity
@@ -346,12 +411,10 @@ export default function PackagesScreen({
                             { color: pkg.color },
                           ]}
                         >
-                          ${price}
+                          {displayedPrice}
                         </Text>
                         <Text style={styles.packagePricePeriod}>
-                          {selectedDuration === 'monthly'
-                            ? 'شهر'
-                            : '3 أشهر'}
+                          {displayedPeriod}
                         </Text>
                       </View>
                     </View>
@@ -684,4 +747,3 @@ const styles = StyleSheet.create({
     color: '#FF9800',
   },
 });
-
