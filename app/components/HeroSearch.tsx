@@ -73,7 +73,6 @@ useEffect(() => {
       jobsByArea.current = _jobsByArea;
       areasByJob.current = _areasByJob;
 
-      // ✅ تعبئة القوائم من الواقع فقط
       setJobs([...allJobs]);
       setAreas([...allAreas]);
 
@@ -88,7 +87,7 @@ useEffect(() => {
 }, []);
 
 
-  // تحديث القوائم حسب الاختيار
+
   useEffect(() => {
     if (area && jobsByArea.current[area]) {
       setJobs(jobsByArea.current[area]);

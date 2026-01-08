@@ -18,59 +18,67 @@ const DRAWER_WIDTH = width * 0.75;
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (route: string) => void;
+  onNavigate: (route: string, section?: "privacy" | "terms" | "subscriptions") => void;
 };
 
 const ITEMS = [
-  { label: 'الملف الشخصي', route: 'profile', icon: 'account-outline' },
-  { label: 'السياسة العامة', route: 'policy', icon: 'file-document-outline' },
-  { label: 'الخصوصية', route: 'privacy', icon: 'shield-lock-outline' },
-  { label: 'تواصل معنا', route: 'contact', icon: 'phone-outline' },
+  { label: 'الرئيسية', route: 'main', icon: 'home-outline' },
+
+  { label: 'صفحتي', route: 'profile', icon: 'account-outline' },
+
+  { label: 'سياسة الخصوصية', route: 'policies', section: 'privacy', icon: 'shield-lock-outline' },
+  { label: 'الشروط والأحكام', route: 'policies', section: 'terms', icon: 'file-document-outline' },
+  { label: 'الاشتراكات والدفع', route: 'policies', section: 'subscriptions', icon: 'credit-card-outline' },
+
+  { label: 'تواصل معنا', route: 'contact', icon: 'email-outline' },
 ];
+
 
 export default function AppDrawer({ visible, onClose, onNavigate }: Props) {
   const translateX = React.useRef(new Animated.Value(DRAWER_WIDTH)).current;
 
-React.useEffect(() => {
-  if (visible) {
-    Animated.spring(translateX, {
-      toValue: 0,
-      damping: 18,
-      stiffness: 120,
-      mass: 0.9,
-      useNativeDriver: true,
-    }).start();
-  } else {
-    Animated.spring(translateX, {
-      toValue: DRAWER_WIDTH,
-      damping: 18,
-      stiffness: 120,
-      mass: 0.9,
-      useNativeDriver: true,
-    }).start();
-  }
-}, [visible]);
+  React.useEffect(() => {
+    if (visible) {
+      Animated.spring(translateX, {
+        toValue: 0,
+        damping: 18,
+        stiffness: 120,
+        mass: 0.9,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.spring(translateX, {
+        toValue: DRAWER_WIDTH,
+        damping: 18,
+        stiffness: 120,
+        mass: 0.9,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
 
 
-  
+
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    // <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    <View style={styles.container}>
+
       {/* OVERLAY */}
       <TouchableWithoutFeedback disabled={!visible} onPress={onClose}>
-  <Animated.View
-    style={[
-      styles.overlay,
-      {
-        opacity: translateX.interpolate({
-          inputRange: [0, DRAWER_WIDTH],
-          outputRange: [1, 0],
-        }),
-        pointerEvents: visible ? 'auto' : 'none',
-      },
-    ]}
-  />
-</TouchableWithoutFeedback>
+        <Animated.View
+          style={[
+            styles.overlay,
+            {
+              opacity: translateX.interpolate({
+                inputRange: [0, DRAWER_WIDTH],
+                outputRange: [1, 0],
+              }),
+              pointerEvents: visible ? 'auto' : 'none',
+            },
+          ]}
+        />
+      </TouchableWithoutFeedback>
 
 
       {/* DRAWER */}
@@ -82,16 +90,12 @@ React.useEffect(() => {
       >
         {ITEMS.map((item) => (
           <TouchableOpacity
-            key={item.route}
+            // key={item.route}
+            key={`${item.route}-${item.section ?? 'main'}`}
             style={styles.item}
             onPress={() => {
-            if (item.route === 'contact') {
-            onNavigate('contact');
-          } else {
-            onNavigate(item.route);
-          }
-          onClose();
-
+              onNavigate(item.route, item.section as any);
+              onClose();
             }}
           >
             <List.Icon icon={item.icon} />
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    width: DRAWER_WIDTH ,
+    width: DRAWER_WIDTH,
     backgroundColor: '#c4cbc9ff',
     paddingTop: 64,
 
@@ -137,4 +141,12 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontFamily: 'Almarai-Regular',
   },
+  container: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+
 });

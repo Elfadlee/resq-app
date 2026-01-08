@@ -163,36 +163,57 @@ const AdvertisementBanner = () => {
         style={styles.gradientBackground}
       >
         <Card.Content style={styles.content}>
-          <View style={styles.header}>
+          {/* <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text style={styles.name}>{item.name}</Text>
-
-              <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
-                <Text style={styles.professionText}>{item.profession}</Text>
-              </View>
+                <Text style={styles.name}>{item.name}</Text>
+                <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
+                   <Text style={styles.professionText}>{item.profession}</Text>
+                </View>
             </View>
-          </View>
+              
+            
+          </View> */}
+<View style={styles.header}>
+  <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
+      <Text style={styles.professionText}>{item.profession}</Text>
+    </View>
+  <View style={styles.nameRow}>
+    <Text style={styles.name}>{item.name}</Text>
+
+    
+  </View>
+</View>
+
+
+       
+           <View style={styles.infoRow}>
+  <View style={styles.infoGroup}>
+    <Icon name="map-marker" size={14} color={item.color} />
+    <Text style={styles.infoText}>{item.location}</Text>
+  </View>
+
+  <View style={styles.infoGroup}>
+    <Icon name="phone" size={14} color={item.color} />
+    <Text style={styles.infoText}>{item.phone}</Text>
+  </View>
+</View>
+
 
           <Text style={styles.description} numberOfLines={2}>
             {item.description}
           </Text>
 
-          <View style={styles.infoRow}>
-            <Icon name="map-marker" size={14} color={item.color} />
-            <Text style={styles.infoText}>{item.location}</Text>
-          </View>
 
-          <View style={styles.infoRow}>
-            <Icon name="phone" size={14} color={item.color} />
-            <Text style={styles.infoText}>{item.phone}</Text>
-          </View>
+         
+
+      
 
           <TouchableOpacity
             style={[styles.whatsappButton, { backgroundColor: item.color }]}
             onPress={() => handleWhatsApp(item.whatsapp)}
           >
             <Icon name="whatsapp" size={16} color="#fff" />
-            <Text style={styles.whatsappButtonText}>تواصل عبر واتساب</Text>
+            <Text style={styles.whatsappButtonText}>  تواصل عبر الواتسب   </Text>
           </TouchableOpacity>
         </Card.Content>
       </LinearGradient>
@@ -247,23 +268,131 @@ const AdvertisementBanner = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { marginVertical: 8, marginTop: 0 },
-  card: { width: CARD_WIDTH, borderRadius: 0, overflow: 'hidden' },
-  gradientBackground: { overflow: 'hidden' },
-  content: { padding: 20 },
-  header: { flexDirection: 'row-reverse', marginBottom: 6 },
-  headerText: { alignItems: 'flex-end', flex: 1 },
-  name: { fontFamily: 'Almarai-Bold', fontSize: 14, textAlign: 'right', marginBottom: 6 },
-  professionBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  professionText: { fontFamily: 'Almarai-Bold', fontSize: 11, color: '#fff' },
-  description: { fontFamily: 'Almarai-Regular', fontSize: 12, textAlign: 'right', lineHeight: 18, color: '#666', marginVertical: 4 },
-  infoRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4 },
-  infoText: { fontFamily: 'Almarai-Regular', fontSize: 11, color: '#555', marginRight: 4 },
-  whatsappButton: { flexDirection: 'row-reverse', alignItems: 'center', alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginTop: 8 },
-  whatsappButtonText: { fontFamily: 'Almarai-Bold', fontSize: 11, color: '#fff', marginRight: 4 },
-  bottomShadow: { height: 14, width: '100%' },
-  pagination: { flexDirection: 'row', justifyContent: 'center', marginTop: 6 },
-  dot: { height: 6, borderRadius: 3, marginHorizontal: 3 },
+  /* ====== Layout ====== */
+  container: {
+    marginVertical: 0,
+    paddingVertical: 0,
+  },
+
+  card: {
+    width: CARD_WIDTH,
+    borderRadius: 0,
+    overflow: 'hidden',
+   
+  },
+
+  gradientBackground: {
+    overflow: 'hidden',
+  },
+
+  content: {
+    padding: 15,
+  },
+
+  /* ====== Header ====== */
+  header: {
+    flexDirection: 'row-reverse',
+    marginBottom: 10,
+  },
+
+  headerText: {
+    alignItems: 'flex-end',
+    flex: 1,
+  },
+
+  name: {
+    fontFamily: 'Almarai-Bold',
+    fontSize: 14,
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+
+  professionBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+
+  professionText: {
+    fontFamily: 'Almarai-Bold',
+    fontSize: 11,
+    color: '#fff',
+  },
+
+  /* ====== Body ====== */
+  description: {
+    fontFamily: 'Almarai-Regular',
+    fontSize: 13,
+    textAlign: 'right',
+    lineHeight: 14,
+    color: '#666',
+    marginVertical: 10,
+    marginHorizontal: 10,
+  },
+
+  infoRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+
+  infoText: {
+    fontFamily: 'Almarai-Regular',
+    fontSize: 11,
+    color: '#555',
+    marginRight: 4,
+  },
+
+  /* ====== Actions ====== */
+  whatsappButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+    borderRadius: 16,
+    marginTop: 14,
+  },
+
+  whatsappButtonText: {
+    fontFamily: 'Almarai-Bold',
+    fontSize: 11,
+    color: '#fff',
+    marginRight: 4,
+  },
+
+  /* ====== Footer ====== */
+  bottomShadow: {
+    height: 14,
+    width: '100%',
+  },
+
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+
+  dot: {
+    height: 6,
+    borderRadius: 3,
+    marginHorizontal: 3,
+  },
+  nameRow: {
+  flexDirection: 'row-reverse',
+  alignItems: 'center',
+  marginHorizontal: 10,
+},
+infoGroup: {
+  flexDirection: 'row-reverse',
+  alignItems: 'center',
+  marginLeft: 12,
+},
+
+
 });
+
 
 export default AdvertisementBanner;

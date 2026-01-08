@@ -31,22 +31,22 @@ export default function AppHeader({ onMenuOpen }: Props) {
         {/* MENU */}
         <IconButton
           icon="menu"
-          size={26}
+          size={32}
           iconColor={theme.colors.onPrimary}
           onPress={onMenuOpen}
         />
-        <Text style={[styles.title, { color: theme.colors.onPrimary }]}>
-          رزق
-        </Text>
+        {/* <Text style={[styles.title, { color: theme.colors.onPrimary }]}>
+           منصة رزق
+        </Text> */}
 
         {/* LOGO + TITLE */}
-        <View style={styles.logoCircle}>
+        
           <Image
             source={require('../../assets/images/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-        </View>
+      
         {/* BALANCE */}
         <View style={{ width: 48 }} />
       </View>
@@ -63,39 +63,26 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
     display: 'flex',
-  },
-  logoContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
+    marginBottom: -10,
     marginTop: 10,
-    paddingBottom: 10,
-  },
-  logoCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-    marginRight: 'auto',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  logo: {
-    width: 44,
-    height: 44,
-    alignItems: 'flex-end',
     
   },
-  title:  {
-    textAlign: 'center',
-    fontSize: 20,
-    fontFamily: 'Almarai-ExtraBold',
+
+
+  logo: {
+    width: 230,
+    height: 230,
+    alignItems: 'center',
+    marginTop: 20,
+    marginRight: 20,
+    
   },
+  // title:  {
+  //   flex: 1,
+  //   textAlign: 'center',
+  //   fontSize: 25,
+  //   fontFamily: 'Almarai-ExtraBold',
+  //   marginRight: 8,
+  //   marginTop: 10,
+  // },
 });

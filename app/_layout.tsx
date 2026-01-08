@@ -13,53 +13,58 @@ import MainScreen from "./screens/MainScreen";
 
 
 
+
 export default function RootLayout() {
 
   const fontsLoaded = useAppFonts();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentScreen, setCurrentScreen] =
-    useState<"main" | "contact" | "profile" | "search">("main");
+    useState<"main" | "contact" | "profile" | "search" | "policies">("main");
 
-useEffect(() => {
-  let InAppPurchases: any;
+  const [policySection, setPolicySection] =
+    useState<"privacy" | "terms" | "subscriptions">("privacy");
 
-  if (Platform.OS !== "ios") {
-    console.log("IAP disabled on this platform");
-    return;
-  }
 
-  (async () => {
-    try {
-      InAppPurchases = await import("expo-in-app-purchases");
-      await InAppPurchases.connectAsync();
+  useEffect(() => {
+    let InAppPurchases: any;
 
-      InAppPurchases.setPurchaseListener(
-        async ({ results }: { results: any[] }) => {
-          if (!results) return;
-
-          for (const purchase of results) {
-            if (!purchase.transactionReceipt) continue;
-
-            console.log("📜 RECEIPT RECEIVED");
-
-            await InAppPurchases.finishTransactionAsync(
-              purchase,
-              true
-            );
-          }
-        }
-      );
-
-      console.log("✔️ IAP Ready");
-    } catch (err) {
-      console.log("❌ IAP init failed", err);
+    if (Platform.OS !== "ios") {
+      console.log("IAP disabled on this platform");
+      return;
     }
-  })();
 
-  return () => {
-    InAppPurchases?.disconnectAsync?.();
-  };
-}, []);
+    (async () => {
+      try {
+        InAppPurchases = await import("expo-in-app-purchases");
+        await InAppPurchases.connectAsync();
+
+        InAppPurchases.setPurchaseListener(
+          async ({ results }: { results: any[] }) => {
+            if (!results) return;
+
+            for (const purchase of results) {
+              if (!purchase.transactionReceipt) continue;
+
+              console.log("📜 RECEIPT RECEIVED");
+
+              await InAppPurchases.finishTransactionAsync(
+                purchase,
+                true
+              );
+            }
+          }
+        );
+
+        console.log("✔️ IAP Ready");
+      } catch (err) {
+        console.log("❌ IAP init failed", err);
+      }
+    })();
+
+    return () => {
+      InAppPurchases?.disconnectAsync?.();
+    };
+  }, []);
 
 
 
@@ -82,27 +87,36 @@ useEffect(() => {
         </SafeAreaView>
 
         {/* SCREEN CONTENT */}
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, position: "relative" }}>
+
           <MainScreen
             currentScreen={currentScreen}
+            policySection={policySection}
             setCurrentScreen={setCurrentScreen}
           />
+          {/* DRAWER */}
+          <AppDrawer
+            visible={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onNavigate={(route, section) => {
+              setDrawerOpen(false);
+              setCurrentScreen(route as any);
+
+              if (section) {
+                setPolicySection(section);
+              }
+            }}
+          />
+
+
+
+
+          {/* FOOTER */}
+          <SafeAreaView style={{ backgroundColor: "#0B3C5D" }}>
+            <AppFooter setCurrentScreen={setCurrentScreen} />
+          </SafeAreaView>
+
         </View>
-
-        {/* FOOTER */}
-        <SafeAreaView style={{ backgroundColor: "#0B3C5D" }}>
-          <AppFooter setCurrentScreen={setCurrentScreen} />
-        </SafeAreaView>
-
-        {/* DRAWER */}
-        <AppDrawer
-          visible={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          onNavigate={(route) => {
-            setDrawerOpen(false);
-            setCurrentScreen(route as any);
-          }}
-        />
 
       </PaperProvider>
     </SafeAreaProvider>

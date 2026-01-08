@@ -5,10 +5,14 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = {
   name: string;
-  jobTitle:  string;
+  jobTitle: string;
   description: string;
   phone: string;
   area: string;
+  subscription?: {
+    package?: string;
+    packageName?: string;
+  };
   onPress?: () => void;
 };
 
@@ -18,16 +22,23 @@ export default function ServiceCard({
   description,
   phone,
   area,
+  subscription,
   onPress,
 }: Props) {
   const theme = useTheme();
 
   const openWhatsApp = () => {
-    const digits = String(phone ?? '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+    const digits = String(phone ?? '')
+      .replace(/[^\d+]/g, '')
+      .replace(/^\+/, '');
+
     if (digits.length > 0) {
       Linking.openURL(`https://wa.me/${digits}`).catch(() => {});
     }
   };
+
+  // ✅ القراءة من الداتا مباشرة
+  const subscriptionLabel = subscription?.packageName ?? 'أساسي';
 
   return (
     <Card
@@ -37,19 +48,25 @@ export default function ServiceCard({
       onPress={onPress}
     >
       <Card.Content style={styles.content}>
+        {/* SUBSCRIPTION LABEL */}
+        <View style={styles.rightIconSection}>
+          <View style={styles.subscriptionBadge}>
+            <Text style={styles.subscriptionBadgeText}>
+              {subscriptionLabel}
+            </Text>
+          </View>
+        </View>
 
-        {/* RIGHT – NAME + JOB */}
+        {/* NAME + JOB */}
         <View style={styles.rightSection}>
           <Text style={styles.name} numberOfLines={1}>
-            {name ? String(name) : ''}
+            {name ?? ''}
           </Text>
 
           <View style={styles.jobPill}>
             <Text style={styles.jobTitle} numberOfLines={1}>
-              {jobTitle ? String(jobTitle) : ''}
+              {jobTitle ?? ''}
             </Text>
-
-
           </View>
         </View>
 
@@ -62,13 +79,13 @@ export default function ServiceCard({
               { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            {description ? String(description) : ''}
+            {description ?? ''}
           </Text>
 
           <View style={styles.infoRow}>
             <Icon name="map-marker" size={14} color="#6b7280" />
             <Text numberOfLines={1} style={styles.area}>
-              {area ? String(area) : ''}
+              {area ?? ''}
             </Text>
           </View>
 
@@ -79,11 +96,10 @@ export default function ServiceCard({
               style={styles.phoneLink}
               onPress={openWhatsApp}
             >
-              {phone ? String(phone) : ''}
+              {phone ?? ''}
             </Text>
           </View>
         </View>
- 
       </Card.Content>
     </Card>
   );
@@ -101,11 +117,33 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
+  rightIconSection: {
+    width: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  subscriptionBadge: {
+    backgroundColor: '#FF9800',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subscriptionBadgeText: {
+    fontFamily: 'Almarai-Bold',
+    fontSize: 11,
+    color: '#fff',
+    textAlign: 'center',
+  },
   rightSection: {
     minWidth: 90,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    marginLeft: 8,
   },
   name: {
     fontFamily: 'Almarai-Bold',
@@ -148,32 +186,11 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'right',
   },
-  phone: {
-    fontFamily: 'Almarai-Regular',
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
   phoneLink: {
     fontFamily: 'Almarai-Regular',
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'right',
     color: '#f59e0b',
-  },
-  leftSection: {
-    width: 36,
-    alignItems: 'center',
-  },
-  whatsappSurface: {
-    backgroundColor: '#25D366',
-    borderRadius: 18,
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconBtn: {
-    margin: 0,
   },
 });

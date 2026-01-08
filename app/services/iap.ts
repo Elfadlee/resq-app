@@ -1,11 +1,11 @@
 import { Platform, Alert } from "react-native";
-import Constants from "expo-constants";   // ⭐ تمت الإضافة
+import Constants from "expo-constants";  
 
 let IAP: any = null;
 let isConnected = false;
 let loadedProducts: any[] = [];
 
-// ⭐ نعرّف هل التطبيق يعمل داخل Expo Go
+
 const isExpoGo = Constants.appOwnership === "expo";
 
 const PRODUCT_IDS = [
@@ -20,7 +20,7 @@ const PRODUCT_IDS = [
 
 async function loadIAP() {
 
-  // ⭐ لا نحمل المكتبة على الويب / أندرويد / Expo Go
+
   if (Platform.OS !== "ios" || isExpoGo) {
     console.log("IAP disabled in Expo Go / non-iOS");
     return;
@@ -28,7 +28,8 @@ async function loadIAP() {
 
   if (!IAP) {
     try {
-      IAP = await import("expo-in-app-purchases");  // ⭐ ملفف بـ try/catch
+      // IAP = await import("expo-in-app-purchases");  
+      IAP = require("expo-in-app-purchases");
     } catch {
       console.log("IAP module not available — skipping");
       IAP = null;
@@ -40,7 +41,7 @@ async function loadIAP() {
 export async function initIAP() {
   await loadIAP();
 
-  // ⭐ إذا لا يوجد IAP → لا نفعل شيء
+
   if (!IAP || Platform.OS !== "ios" || isExpoGo) return;
 
   if (isConnected) return;
@@ -67,10 +68,10 @@ export async function initIAP() {
 }
 
 
-// 🛒 الشراء — iOS Build فقط (وليس Expo Go)
+
 export async function buy(productId: string) {
 
-  // ⭐ Expo Go / Web / Android → رسالة فقط بدون كراش
+
   if (Platform.OS !== "ios" || isExpoGo) {
     console.log("IAP disabled — UI mode only");
     Alert.alert("تنبيه", "الدفع يعمل فقط في نسخة iOS Build / TestFlight");
