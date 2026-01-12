@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, StyleSheet, View, Text } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Card, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -16,6 +16,7 @@ type Props = {
   onPress?: () => void;
 };
 
+
 export default function ServiceCard({
   name,
   jobTitle,
@@ -27,17 +28,31 @@ export default function ServiceCard({
 }: Props) {
   const theme = useTheme();
 
+  // Icon logic now inside the component
+  let leftIcon = null;
+  let leftIconColor = '#BFC1C6'; // default: silver (gray)
+  if (subscription?.package === 'business') {
+    leftIcon = 'crown';
+    leftIconColor = '#FFB100'; // Nice gold/yellow for crown
+  } else if (subscription?.package === 'pro') {
+    leftIcon = 'star';
+    leftIconColor = '#FFD700'; // Gold
+  } else {
+    leftIcon = 'star';
+    leftIconColor = '#BFC1C6'; // Silver/Gray
+  }
+
   const openWhatsApp = () => {
     const digits = String(phone ?? '')
       .replace(/[^\d+]/g, '')
       .replace(/^\+/, '');
 
     if (digits.length > 0) {
-      Linking.openURL(`https://wa.me/${digits}`).catch(() => {});
+      Linking.openURL(`https://wa.me/${digits}`).catch(() => { });
     }
   };
 
-  // ✅ القراءة من الداتا مباشرة
+
   const subscriptionLabel = subscription?.packageName ?? 'أساسي';
 
   return (
@@ -49,13 +64,13 @@ export default function ServiceCard({
     >
       <Card.Content style={styles.content}>
         {/* SUBSCRIPTION LABEL */}
-        <View style={styles.rightIconSection}>
-          <View style={styles.subscriptionBadge}>
-            <Text style={styles.subscriptionBadgeText}>
-              {subscriptionLabel}
-            </Text>
-          </View>
-        </View>
+          {/* <View style={styles.rightIconSection}>
+            <View style={styles.subscriptionBadge}>
+              <Text style={styles.subscriptionBadgeText}>
+                {subscriptionLabel}
+              </Text>
+            </View>
+          </View> */}
 
         {/* NAME + JOB */}
         <View style={styles.rightSection}>
@@ -100,6 +115,9 @@ export default function ServiceCard({
             </Text>
           </View>
         </View>
+            <View style={styles.leftIconSection}>
+                <Icon name={leftIcon} size={24} color={leftIconColor} />
+            </View>
       </Card.Content>
     </Card>
   );
@@ -142,12 +160,12 @@ const styles = StyleSheet.create({
     minWidth: 90,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 8,
     marginLeft: 8,
   },
   name: {
     fontFamily: 'Almarai-Bold',
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
     color: '#1f2937',
   },
@@ -189,8 +207,14 @@ const styles = StyleSheet.create({
   phoneLink: {
     fontFamily: 'Almarai-Regular',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '800',
     textAlign: 'right',
     color: '#f59e0b',
   },
+  leftIconSection: {
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 8,
+  width: 36,
+},
 });

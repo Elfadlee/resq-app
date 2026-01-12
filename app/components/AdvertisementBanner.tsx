@@ -26,6 +26,7 @@ type Advertisement = {
   whatsapp: string;
   color: string;
   description: string;
+  crown?: boolean;
 };
 
 const DEFAULT_ADS: Advertisement[] = [
@@ -38,6 +39,7 @@ const DEFAULT_ADS: Advertisement[] = [
     whatsapp: '9647701234567',
     color: '#FF9800',
     description: 'خدمات كهربائية متكاملة - صيانة وتركيب',
+    crown: true,
   },
   {
     id: '2',
@@ -48,6 +50,7 @@ const DEFAULT_ADS: Advertisement[] = [
     whatsapp: '9647712345678',
     color: '#FF9800',
     description: 'إصلاح وتركيب جميع أنواع السباكة',
+    crown: true,
   },
   {
     id: '3',
@@ -58,6 +61,7 @@ const DEFAULT_ADS: Advertisement[] = [
     whatsapp: '9647723456789',
     color: '#FF9800',
     description: 'تفصيل وتصليح الأثاث المنزلي',
+    crown: true,
   }
 ];
 
@@ -102,6 +106,7 @@ const AdvertisementBanner = () => {
             whatsapp: phone.replace('+', '').replace(/\s/g, ''),
             color: '#FF9800',
             description: user.description || 'خدمات متميزة ومحترفة',
+            crown: true,
           };
         });
         setAdvertisements(ads);
@@ -163,40 +168,40 @@ const AdvertisementBanner = () => {
         style={styles.gradientBackground}
       >
         <Card.Content style={styles.content}>
-          {/* <View style={styles.header}>
-            <View style={styles.headerText}>
-                <Text style={styles.name}>{item.name}</Text>
-                <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
-                   <Text style={styles.professionText}>{item.profession}</Text>
-                </View>
+
+          <View style={styles.header}>
+            <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
+              <Text style={styles.professionText}>{item.profession}</Text>
             </View>
-              
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{item.name}</Text>
             
-          </View> */}
-<View style={styles.header}>
-  <View style={[styles.professionBadge, { backgroundColor: item.color }]}>
-      <Text style={styles.professionText}>{item.profession}</Text>
-    </View>
-  <View style={styles.nameRow}>
-    <Text style={styles.name}>{item.name}</Text>
-
-    
-  </View>
-</View>
 
 
-       
-           <View style={styles.infoRow}>
-  <View style={styles.infoGroup}>
-    <Icon name="map-marker" size={14} color={item.color} />
-    <Text style={styles.infoText}>{item.location}</Text>
-  </View>
+            </View>
+              {item.crown && (
+                <Icon
+                  name="crown"
+                  size={22}
+                  color="#FFC700"
+                  style={styles.crownIcon}
+                />
+              )}
+          </View>
 
-  <View style={styles.infoGroup}>
-    <Icon name="phone" size={14} color={item.color} />
-    <Text style={styles.infoText}>{item.phone}</Text>
-  </View>
-</View>
+
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoGroup}>
+              <Icon name="map-marker" size={14} color={item.color} />
+              <Text style={styles.infoText}>{item.location}</Text>
+            </View>
+
+            <View style={styles.infoGroup}>
+              <Icon name="phone" size={14} color={item.color} />
+              <Text style={styles.infoText}>{item.phone}</Text>
+            </View>
+          </View>
 
 
           <Text style={styles.description} numberOfLines={2}>
@@ -204,9 +209,9 @@ const AdvertisementBanner = () => {
           </Text>
 
 
-         
 
-      
+
+
 
           <TouchableOpacity
             style={[styles.whatsappButton, { backgroundColor: item.color }]}
@@ -228,7 +233,7 @@ const AdvertisementBanner = () => {
         ref={flatListRef}
         data={advertisements}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.id}-${index}`} 
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         horizontal
         inverted={I18nManager.isRTL}
         showsHorizontalScrollIndicator={false}
@@ -268,7 +273,7 @@ const AdvertisementBanner = () => {
 };
 
 const styles = StyleSheet.create({
-  /* ====== Layout ====== */
+
   container: {
     marginVertical: 0,
     paddingVertical: 0,
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 0,
     overflow: 'hidden',
-   
+
   },
 
   gradientBackground: {
@@ -289,7 +294,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
 
-  /* ====== Header ====== */
+
   header: {
     flexDirection: 'row-reverse',
     marginBottom: 10,
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  /* ====== Body ====== */
+
   description: {
     fontFamily: 'Almarai-Regular',
     fontSize: 13,
@@ -345,7 +350,6 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
 
-  /* ====== Actions ====== */
   whatsappButton: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -363,7 +367,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
 
-  /* ====== Footer ====== */
+
   bottomShadow: {
     height: 14,
     width: '100%',
@@ -381,16 +385,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 3,
   },
   nameRow: {
-  flexDirection: 'row-reverse',
-  alignItems: 'center',
-  marginHorizontal: 10,
-},
-infoGroup: {
-  flexDirection: 'row-reverse',
-  alignItems: 'center',
-  marginLeft: 12,
-},
-
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  infoGroup: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  crownIcon: {
+    marginRight: 6,
+    marginTop: -2,
+  },
 
 });
 

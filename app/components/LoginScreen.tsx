@@ -1,33 +1,33 @@
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from '../services/firestore'; // تأكد أن db = getFirestore(app)
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from "react";
-import {
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    Modal,
-    TouchableWithoutFeedback,
-} from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, TouchableWithoutFeedback } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppleLoginButton from "./AppleLoginButton";
+import storage from "../services/storage-helper";
 
-export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navigation }: any) {
 
 
+interface LoginScreenProps {
+    onLogin?: (mobile: string, password: string, isSocial: boolean) => void;
+    onGoToRegister?: (data?: any) => void;
+    // goToProfile?: () => void;
+    goToProfile?: (user: any) => void;
+    navigation?: { navigate: (screen: string) => void };
+}
+
+export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navigation }: LoginScreenProps) {
     const [mobile, setMobile] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-
     const [mobileError, setMobileError] = useState("");
     const [passwordError, setPasswordError] = useState("");
-
     const [forgotVisible, setForgotVisible] = useState(false);
     const [resetEmail, setResetEmail] = useState("");
     const [resetError, setResetError] = useState("");
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         setMobileError("");
         setPasswordError("");
 
@@ -41,17 +41,42 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
             return;
         }
 
-        onLogin("+964" + mobile, password, false);
+        try {
+            const cleanMobile = mobile.replace(/\s+/g, "");
+
+                    const q = query(
+                    collection(db, "users"),
+                    where("mobile", "==", "+964" + cleanMobile),
+                    where("password", "==", password)
+                    );
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
+                        setPasswordError("رقم الجوال أو كلمة المرور غير صحيحة");
+                        return;
+                    }
+
+                    // Get the first user document data
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = { id: userDoc.id, ...userDoc.data() };
+
+                    await storage.setObject("currentUser", userData);
+                    goToProfile?.(userData)
+                    console.log("GO TO PROFILE FROM MOBILE", userData);
+
+
+        } catch (e) {
+            setPasswordError("خطأ أثناء تسجيل الدخول");
+        }
     };
+
 
     const handleReset = () => {
         setResetError("");
-
         if (!resetEmail.includes("@")) {
             setResetError("الرجاء إدخال بريد إلكتروني صحيح");
             return;
         }
-
         setForgotVisible(false);
         setResetEmail("");
     };
@@ -59,40 +84,27 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-
                 {Platform.OS === "ios" && (
                     <View style={{ marginBottom: 16 }}>
                         <AppleLoginButton
-                            // مستخدم جديد → يذهب للتسجيل
-                            onSocialLogin={(draft: any) => {
+                            onSocialLogin={(draft) => {
                                 onGoToRegister?.({
                                     initialData: draft,
                                     isSocialSignup: true,
                                 });
                             }}
-
-                            // مستخدم موجود → يذهب إلى ProfileBanner
-                            onGoToProfile={() => goToProfile?.()}
+                             onGoToProfile={goToProfile}
                         />
-
-
-
                     </View>
                 )}
-
                 <View style={styles.card}>
                     <MaterialCommunityIcons name="login" size={42} color="#FF9800" />
-
                     <Text style={styles.title}>تسجيل الدخول</Text>
                     <Text style={styles.subtitle}>أدخل رقم الجوال وكلمة المرور</Text>
-
                     {/* رقم الجوال */}
                     <Text style={styles.label}>رقم الجوال</Text>
-
                     <View style={styles.inputWrapper}>
-                        {/* نجعل +964 مثبت يسار دائمًا */}
                         <Text style={styles.prefix}>+964</Text>
-
                         <TextInput
                             value={mobile}
                             onChangeText={setMobile}
@@ -102,14 +114,10 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                             textAlign="right"
                         />
                     </View>
-
                     {mobileError !== "" && <Text style={styles.error}>{mobileError}</Text>}
 
-                    {/* كلمة المرور */}
                     <Text style={styles.label}>كلمة المرور</Text>
-
                     <View style={styles.inputWrapper}>
-
                         <TouchableOpacity
                             onPress={() => setShowPassword(!showPassword)}
                             style={styles.eye}
@@ -120,7 +128,6 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                                 color="#777"
                             />
                         </TouchableOpacity>
-
                         <TextInput
                             value={password}
                             onChangeText={setPassword}
@@ -130,48 +137,31 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                             textAlign="right"
                         />
                     </View>
-
                     {passwordError !== "" && <Text style={styles.error}>{passwordError}</Text>}
 
                     <TouchableOpacity onPress={() => setForgotVisible(true)} style={styles.forgotButton}>
                         <Text style={styles.forgetText}>نسيت كلمة المرور؟</Text>
                     </TouchableOpacity>
-
-
                     <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin}>
                         <MaterialCommunityIcons name="login" size={20} color="#fff" />
                         <Text style={styles.primaryText}>دخول</Text>
                     </TouchableOpacity>
-
-
                     <TouchableOpacity style={styles.secondaryBtn} onPress={onGoToRegister}>
                         <MaterialCommunityIcons name="account-plus" size={20} color="#FF9800" />
                         <Text style={styles.secondaryText}>إنشاء حساب جديد</Text>
                     </TouchableOpacity>
-
                 </View>
             </ScrollView>
-
             {/* Forgot Password Modal */}
-            <Modal
-                visible={forgotVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setForgotVisible(false)}
-            >
+            <Modal visible={forgotVisible} transparent animationType="fade" onRequestClose={() => setForgotVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setForgotVisible(false)}>
                     <View style={styles.overlay} />
                 </TouchableWithoutFeedback>
-
                 <View style={styles.modalCard}>
-
                     <MaterialCommunityIcons name="lock-reset" size={40} color="#FF9800" />
-
                     <Text style={styles.title}>نسيت كلمة المرور</Text>
                     <Text style={styles.subtitle}>أدخل بريدك الإلكتروني لإعادة التعيين</Text>
-
                     <Text style={styles.label}>البريد الإلكتروني</Text>
-
                     <View style={styles.inputWrapper}>
                         <TextInput
                             value={resetEmail}
@@ -181,23 +171,21 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                             textAlign="right"
                         />
                     </View>
-
                     {resetError !== "" && <Text style={styles.error}>{resetError}</Text>}
-
                     <TouchableOpacity style={styles.primaryBtn} onPress={handleReset}>
                         <MaterialCommunityIcons name="email-send" size={20} color="#fff" />
                         <Text style={styles.primaryText}>إرسال الرابط</Text>
                     </TouchableOpacity>
-
                     <TouchableOpacity onPress={() => setForgotVisible(false)} style={{ marginTop: 6 }}>
                         <Text style={styles.forgetText}>إغلاق</Text>
                     </TouchableOpacity>
-
                 </View>
             </Modal>
         </View>
     );
 }
+
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },

@@ -38,12 +38,13 @@ export default function PoliciesScreen({ section }: Props) {
     );
   }, [section]);
 
+  const FOOTER_HEIGHT = 120;
   return (
     <ScrollView
-      ref={scrollRef}
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 40 }}
-    >
+  ref={scrollRef}
+  style={styles.container}
+  contentContainerStyle={{ paddingBottom: FOOTER_HEIGHT + 40 }}
+>
 
       {/* سياسة الخصوصية */}
       <View ref={privacyRef} style={styles.section}>
@@ -96,7 +97,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
-    paddingTop: 16,
   },
   section: {
     marginBottom: 40,

@@ -209,7 +209,7 @@ export default function PackagesScreen({
         userId = auth.currentUser.uid;
       }
 
-      // إذا ما في مستخدم → ننشئ حساب جديد إجباريًا
+
       if (!userId) {
         const docRef = await addDoc(collection(db, "users"), userData);
         userId = docRef.id;

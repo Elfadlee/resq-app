@@ -60,12 +60,12 @@ export default function ProfileScreen() {
     const storedUser = await getCurrentUser();
     if (storedUser) {
       setCurrentUser(storedUser);
-      setCurrentScreen("profile");   
+      setCurrentScreen("profile");
       setLoading(false);
       return;
     }
 
-   
+
     const uid = auth.currentUser?.uid;
     if (uid) {
       const snap = await getDoc(doc(db, "users", uid));
@@ -77,13 +77,13 @@ export default function ProfileScreen() {
         await storage.setObject(CURRENT_USER_KEY, userData);
 
         setCurrentUser(userData);
-        setCurrentScreen("profile");  
+        setCurrentScreen("profile");
         setLoading(false);
         return;
       }
     }
 
-  
+
     setCurrentScreen("login");
     setLoading(false);
   };
@@ -184,8 +184,8 @@ export default function ProfileScreen() {
             }}
 
 
-            goToProfile={() => {
-              loadUser();              // 👈 حمّل المستخدم من Firestore / AsyncStorage
+            goToProfile={(user) => {
+              setCurrentUser(user);
               setCurrentScreen("profile");
             }}
 

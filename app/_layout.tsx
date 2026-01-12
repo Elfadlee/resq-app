@@ -9,13 +9,7 @@ import AppHeader from "./components/AppHeader";
 import AppDrawer from "./components/AppDrawer";
 import MainScreen from "./screens/MainScreen";
 
-
-
-
-
-
 export default function RootLayout() {
-
   const fontsLoaded = useAppFonts();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentScreen, setCurrentScreen] =
@@ -23,7 +17,6 @@ export default function RootLayout() {
 
   const [policySection, setPolicySection] =
     useState<"privacy" | "terms" | "subscriptions">("privacy");
-
 
   useEffect(() => {
     let InAppPurchases: any;
@@ -66,9 +59,6 @@ export default function RootLayout() {
     };
   }, []);
 
-
-
-
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -94,6 +84,7 @@ export default function RootLayout() {
             policySection={policySection}
             setCurrentScreen={setCurrentScreen}
           />
+
           {/* DRAWER */}
           <AppDrawer
             visible={drawerOpen}
@@ -107,9 +98,6 @@ export default function RootLayout() {
               }
             }}
           />
-
-
-
 
           {/* FOOTER */}
           <SafeAreaView style={{ backgroundColor: "#0B3C5D" }}>

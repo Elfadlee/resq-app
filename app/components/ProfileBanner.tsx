@@ -1,3 +1,478 @@
+// import * as React from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   ScrollView,
+//   TouchableOpacity,
+//   Platform,
+//   Alert,
+//   ActivityIndicator,
+// } from 'react-native';
+// import { MaterialCommunityIcons } from '@expo/vector-icons';
+// import { useState, useEffect } from 'react';
+// import storage from '../services/storage-helper';
+// import { deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
+// import { db, auth } from "../services/firestore";
+// import { signOut } from "firebase/auth";
+
+
+// type UserProfile = {
+//   uid?: string;
+//   id?: string;
+//   name: string;
+//   jobTitle: string;
+//   area: string;
+//   mobile: string;
+//   email: string;
+//   description: string;
+//   password: string;
+//   subscriptionPackage: string;
+//   subscriptionDuration: 'monthly' | 'quarterly';
+//   subscriptionPrice: number;
+//   subscriptionStart: string;
+//   subscriptionEnd: string;
+//   subscription?: {
+//     isActive?: boolean;
+//     package?: string;
+//     duration?: 'monthly' | 'quarterly';
+//     price?: number;
+//     startAt?: string;
+//     endAt?: string;
+//   };
+// };
+
+// type ProfileBannerProps = {
+//   navigation: any;
+//   onRefresh?: () => void;
+// };
+
+// export default function ProfileBanner({ navigation }: ProfileBannerProps) {
+//   const [profile, setProfile] = useState<UserProfile | null>(null);
+//   const [loading, setLoading] = useState(true);
+//   const userId = auth.currentUser?.uid || profile?.uid;
+//   if (!userId) return;
+
+// function isAccountActive(p: UserProfile) {
+//   const v = p.subscription?.isActive;
+//   return v === true;
+// }
+
+//   useEffect(() => {
+//     loadProfile();
+//   }, []);
+
+//   const loadProfile = async () => {
+//     try {
+//   const user = await storage.getObject<any>('currentUser');
+//       if (user) {
+//         const mapped: UserProfile = {
+//           ...user,
+//           subscriptionPackage: user.subscription?.package || user.subscriptionPackage || '',
+//           subscriptionDuration: user.subscription?.duration || user.subscriptionDuration || '',
+//           subscriptionPrice: user.subscription?.price || user.subscriptionPrice || 0,
+//           subscriptionStart: user.subscription?.startAt || user.subscriptionStart || '',
+//           subscriptionEnd: user.subscription?.endAt || user.subscriptionEnd || '',
+//         };
+//         setProfile(mapped);
+      
+//       }
+//     } catch (error) {
+//       console.error('Error loading profile:', error);
+//       Alert.alert('خطأ', 'فشل تحميل بيانات الملف الشخصي');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const saveProfileEverywhere = async (updated: UserProfile) => {
+
+//     await storage.setObject('currentUser', updated);
+
+
+//     const allUsers = (await storage.getObject<UserProfile[]>('allUsers')) || [];
+//     const index = allUsers.findIndex(
+//       u => u.mobile === updated.mobile
+//     );
+//     if (index !== -1) allUsers[index] = updated;
+//     else allUsers.push(updated);
+
+//     await storage.setObject('allUsers', allUsers);
+
+//     setProfile(updated);
+//   };
+
+//   const formatDate = (d: string) =>
+//     new Date(d).toLocaleDateString('ar', {
+//       year: 'numeric',
+//       month: 'long',
+//       day: 'numeric',
+//     });
+
+//   const calculateDaysRemaining = (endDate: string) => {
+//     const end = new Date(endDate).getTime();
+//     const now = Date.now();
+//     return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+//   };
+
+//   const handleEditProfile = () => {
+//     if (!profile) return;
+//     if (!navigation?.navigate) return Alert.alert('خطأ', 'لا يمكن فتح شاشة التعديل');
+
+//     navigation.navigate('EditProfile', {
+//       profile,
+//       onSave: async (updated: UserProfile) => {
+//         await saveProfileEverywhere(updated);
+//         await loadProfile();
+//       },
+//     });
+//   };
+
+//   const handleUpgradeSubscription = () => {
+//     if (!profile) return;
+
+//     navigation?.navigate?.('PackagesScreen', {
+//       mode: 'upgrade',
+//       currentProfile: profile,
+//       registrationData: profile,
+//       onConfirm: async (pkg: any) => {
+//         const updated = { ...profile, ...pkg };
+//         await saveProfileEverywhere(updated);
+//         Alert.alert('نجاح', 'تم ترقية الباقة بنجاح');
+//       },
+//       onBack: () => navigation.goBack(),
+//     });
+//   };
+
+//   const handleRenewSubscription = () => {
+//     Alert.alert('تجديد الاشتراك', 'هل تريد تجديد اشتراكك؟', [
+//       { text: 'إلغاء', style: 'cancel' },
+//       {
+//         text: 'تجديد',
+//         onPress: () => {
+//           navigation?.navigate?.('PackagesScreen', {
+//             mode: 'renew',
+//             currentProfile: profile,
+//             registrationData: profile,
+//             onConfirm: async (pkg: any) => {
+//               if (!profile) return;
+//               const updated = { ...profile, ...pkg };
+//               await saveProfileEverywhere(updated);
+//               Alert.alert('نجاح', 'تم تجديد الاشتراك بنجاح');
+//             },
+//             onBack: () => navigation.goBack(),
+//           });
+//         },
+//       },
+//     ]);
+//   };
+
+//   const confirmDeleteAccount = async () => {
+//     try {
+//       console.log("🔥 DELETE START");
+
+//       // ⚠️ أهم شيء — نستخدم uid الحقيقي
+//       const uid =
+//         profile?.uid || profile?.id || auth.currentUser?.uid || null;
+
+//       console.log("UID =", uid);
+
+//       if (!uid) {
+//         Alert.alert("خطأ", "لم يتم العثور على معرف المستخدم (UID)");
+//         return;
+//       }
+
+//       const userRef = doc(db, "users", uid);
+//       console.log("DOC PATH =", userRef.path);
+
+//       try {
+//         await deleteDoc(userRef);
+//         console.log("✅ FIRESTORE DOC DELETED");
+//       } catch (err) {
+//         console.log("❌ FIRESTORE DELETE ERROR:", err);
+//         Alert.alert("خطأ", "فشل حذف الحساب من قاعدة البيانات");
+//         return;
+//       }
+
+
+//       await storage.removeItem("currentUser");
+//       await storage.removeItem("allUsers");
+
+
+//       Alert.alert("تم حذف الحساب", "تم حذف حسابك بنجاح", [
+//         {
+//           text: "حسناً",
+//           onPress: () => {
+//             setProfile?.(null);
+//             navigation?.reset?.({
+//               index: 0,
+//               routes: [{ name: "Login" }],
+//             });
+//           },
+//         },
+//       ]);
+//     } catch (e) {
+//       console.log("❌ UNKNOWN DELETE ERROR:", e);
+//       Alert.alert("خطأ", "حدث خطأ غير متوقع أثناء الحذف");
+//     }
+//   };
+
+
+//   const handleDeleteAccount = () => {
+//     Alert.alert(
+//       'حذف الحساب',
+//       'هل أنت متأكد من حذف حسابك؟',
+//       [
+//         { text: 'إلغاء', style: 'cancel' },
+//         { text: 'حذف', style: 'destructive', onPress: confirmDeleteAccount },
+//       ],
+//       { cancelable: true },
+//     );
+//   };
+
+
+
+//   const handleLogout = async () => {
+//     try {
+//       await signOut(auth);          
+//     } catch (e) {
+//       console.log("signOut error", e);
+//     }
+
+//     await storage.clear();        
+
+//     navigation?.reset?.({
+//       index: 0,
+//       routes: [{ name: "Login" }],
+//     });
+//   };
+
+
+//   if (loading)
+//     return (
+//       <View style={styles.loadingContainer}>
+//         <ActivityIndicator size="large" color="#FF9800" />
+//         <Text style={styles.loadingText}>جاري التحميل...</Text>
+//       </View>
+//     );
+
+//   if (!profile)
+//     return (
+//       <View style={styles.errorContainer}>
+//         <MaterialCommunityIcons name="alert-circle" size={60} color="#E53E3E" />
+//         <Text style={styles.errorText}>لم يتم العثور على بيانات الملف الشخصي</Text>
+//         <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+//           <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
+//         </TouchableOpacity>
+//       </View>
+//     );
+
+//   const daysRemaining = calculateDaysRemaining(profile.subscriptionEnd);
+//   const isExpiringSoon = daysRemaining <= 7;
+
+
+
+
+//   return (
+//     <View style={styles.container}>
+//       <ScrollView
+//         style={styles.scrollView}
+//         contentContainerStyle={styles.scrollContent}
+//         showsVerticalScrollIndicator={false}
+//       >
+
+//         <View style={styles.header}>
+//           <Text style={styles.name}>{profile.name}</Text>
+//           <View style={styles.jobBadge}>
+//             <Text style={styles.jobTitle}>{profile.jobTitle}</Text>
+//             <MaterialCommunityIcons name="briefcase" size={16} color="#FF9800" />
+//           </View>
+//           <View style={styles.locationContainer}>
+//             <Text style={styles.location}>{profile.area}</Text>
+//             <MaterialCommunityIcons name="map-marker" size={18} color="#666" />
+//           </View>
+//         </View>
+
+//         {/* Personal Information Section */}
+//         <View style={styles.sectionCard}>
+//           <View style={styles.sectionHeader}>
+//             <Text style={styles.sectionTitle}>المعلومات الشخصية</Text>
+//             <MaterialCommunityIcons name="account-circle" size={24} color="#FF9800" />
+//           </View>
+
+//           <InfoRow icon="phone" label="رقم الهاتف" value={profile.mobile} />
+//           <InfoRow icon="email" label="البريد الإلكتروني" value={profile.email} />
+//           <InfoRow icon="lock" label="كلمة المرور" value={profile.password} />
+//           <InfoRow icon="text" label="الوصف" value={profile.description} />
+
+//           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+//             <Text style={styles.editButtonText}>تعديل المعلومات</Text>
+//             <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
+//           </TouchableOpacity>
+//         </View>
+
+//         {/* Subscription Section */}
+//         <View style={styles.sectionCard}>
+//           <View style={styles.sectionHeader}>
+//             <Text style={styles.sectionTitle}>معلومات الاشتراك</Text>
+//             <MaterialCommunityIcons name="crown" size={24} color="#FF9800" />
+//           </View>
+
+//           <View style={styles.subscriptionHeader}>
+//             <View style={styles.priceContainer}>
+//               <Text style={styles.currency}>دينار</Text>
+//               <Text style={styles.price}>{profile.subscriptionPrice}</Text>
+//             </View>
+//             <View style={styles.packageBadge}>
+//               <Text style={styles.packageText}>{profile.subscriptionPackage}</Text>
+//               <MaterialCommunityIcons name="star" size={20} color="#fff" />
+//             </View>
+//           </View>
+
+//           <View style={styles.subscriptionDetails}>
+//             <InfoRow
+//               icon="calendar-clock"
+//               label="مدة الاشتراك"
+//               value={profile.subscriptionDuration === 'monthly' ? 'شهري' : 'ربع سنوي'}
+//             />
+//             <InfoRow
+//               icon="calendar-start"
+//               label="تاريخ البدء"
+//               value={formatDate(profile.subscriptionStart)}
+//             />
+//             <InfoRow
+//               icon="calendar-end"
+//               label="تاريخ الانتهاء"
+//               value={formatDate(profile.subscriptionEnd)}
+//             />
+
+//             {/* Days Remaining Alert */}
+
+//             {/* Account Status Section */}
+// <View style={[
+//   styles.daysRemainingCard,
+//   isAccountActive(profile)
+//     ? { backgroundColor: '#C6F6D5' }
+//     : { backgroundColor: '#FFD580' }
+// ]}>
+//   <View style={styles.daysRemainingContent}>
+//     <Text style={styles.daysRemainingLabel}>
+//       حالة الحساب
+//     </Text>
+//     <Text style={[
+//       styles.daysRemainingValue,
+//       !isAccountActive(profile) && { color: '#FFA500' }
+//     ]}>
+//       {isAccountActive(profile)
+//         ? 'الحساب فعال'
+//         : 'الحساب قيد المراجعة من التطبيق'}
+//     </Text>
+//   </View>
+//   <MaterialCommunityIcons
+//     name={isAccountActive(profile) ? "check-circle" : "progress-clock"}
+//     size={24}
+//     color={isAccountActive(profile) ? "#48BB78" : "#FFA500"}
+//   />
+// </View>
+//             {/* <View
+//               style={[
+//                 styles.daysRemainingCard,
+//                 isExpiringSoon && styles.daysRemainingWarning,
+//               ]}
+//             >
+//               <View style={styles.daysRemainingContent}>
+//                 <Text style={styles.daysRemainingLabel}>الأيام المتبقية</Text>
+//                 <Text
+//                   style={[
+//                     styles.daysRemainingValue,
+//                     isExpiringSoon && styles.daysRemainingValueWarning,
+//                   ]}
+//                 >
+//                   {daysRemaining > 0 ? `${daysRemaining} يوم` : 'منتهي'}
+//                 </Text>
+//               </View>
+//               <MaterialCommunityIcons
+//                 name={isExpiringSoon ? 'alert' : 'check-circle'}
+//                 size={24}
+//                 color={isExpiringSoon ? '#E53E3E' : '#48BB78'}
+//               />
+//             </View> */}
+//           </View>
+
+//           {/* Subscription Action Buttons */}
+//           <View style={styles.subscriptionActions}>
+//             <TouchableOpacity
+//               style={styles.upgradeButton}
+//               onPress={handleUpgradeSubscription}
+//             >
+//               <Text style={styles.upgradeButtonText}>ترقية الباقة</Text>
+//               <MaterialCommunityIcons name="arrow-up-bold" size={20} color="#fff" />
+//             </TouchableOpacity>
+
+//             <TouchableOpacity
+//               style={styles.renewButton}
+//               onPress={handleRenewSubscription}
+//             >
+//               <Text style={styles.renewButtonText}>تجديد الاشتراك</Text>
+//               <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
+//             </TouchableOpacity>
+//           </View>
+//         </View>
+
+//         {/* Account Actions Section */}
+//         <View style={styles.sectionCard}>
+//           <View style={styles.sectionHeader}>
+//             <Text style={styles.sectionTitle}>إعدادات الحساب</Text>
+//             <MaterialCommunityIcons name="cog" size={24} color="#718096" />
+//           </View>
+
+//           <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
+//             <MaterialCommunityIcons name="chevron-left" size={22} color="#CBD5E0" />
+//             <Text style={styles.actionButtonText}>تسجيل الخروج</Text>
+//             <MaterialCommunityIcons name="logout" size={22} color="#FF9800" />
+//           </TouchableOpacity>
+
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.dangerButton]}
+//             onPress={handleDeleteAccount}
+//           >
+//             <MaterialCommunityIcons name="chevron-left" size={22} color="#CBD5E0" />
+//             <Text style={[styles.actionButtonText, styles.dangerText]}>
+//               حذف الحساب نهائياً
+//             </Text>
+//             <MaterialCommunityIcons name="delete-forever" size={22} color="#E53E3E" />
+//           </TouchableOpacity>
+//         </View>
+
+//         {/* Footer Info */}
+//         <View style={styles.footer}>
+//           <Text style={styles.footerText}>نسخة التطبيق 1.0.0</Text>
+//           <Text style={styles.footerText}>© 2025 جميع الحقوق محفوظة</Text>
+//         </View>
+//       </ScrollView>
+//     </View>
+//   );
+// }
+
+// // Info Row Component - RTL - 
+// const InfoRow = ({
+//   icon,
+//   label,
+//   value,
+// }: {
+//   icon: string;
+//   label: string;
+//   value: string;
+// }) => (
+//   <View style={styles.infoRow}>
+//     <View style={styles.infoContent}>
+//       <Text style={styles.label}>{label}</Text>
+//       <Text style={styles.value}>{value}</Text>
+//     </View>
+//     <MaterialCommunityIcons name={icon as any} size={20} color="#FF9800" />
+//   </View>
+// );
+
 import * as React from 'react';
 import {
   View,
@@ -12,9 +487,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import storage from '../services/storage-helper';
-import { deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { deleteDoc, doc, onSnapshot } from "firebase/firestore";        // ❗️ CHANGED: Added onSnapshot here
 import { db, auth } from "../services/firestore";
-import { deleteUser } from "firebase/auth";
 import { signOut } from "firebase/auth";
 
 
@@ -33,6 +507,14 @@ type UserProfile = {
   subscriptionPrice: number;
   subscriptionStart: string;
   subscriptionEnd: string;
+  subscription?: {
+    isActive?: boolean;
+    package?: string;
+    duration?: 'monthly' | 'quarterly';
+    price?: number;
+    startAt?: string;
+    endAt?: string;
+  };
 };
 
 type ProfileBannerProps = {
@@ -44,41 +526,69 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ❗️ DONT: No need for userId and immediate return here!
+
+  // Utility for isActive supporting both boolean or string
+  function isAccountActive(p: UserProfile) {
+    const v = p.subscription?.isActive;
+    return v === true || v === "true" || v === 1;
+  }
+
+  // ❗️ CHANGED: Real-time Firestore listener
   useEffect(() => {
-    loadProfile();
+    let unsubscribe: any;
+    const setupListener = async () => {
+      let userId = auth.currentUser?.uid;
+      if (!userId) {
+        const user = await storage.getObject<any>('currentUser');
+        userId = user?.uid;
+      }
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      const userRef = doc(db, 'users', userId);
+
+      unsubscribe = onSnapshot(userRef, (userDoc) => {
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          // Flat mapping just like before
+          const mapped: UserProfile = {
+            ...userData,
+            subscriptionPackage: userData.subscription?.package || '',
+            subscriptionDuration: userData.subscription?.duration || '',
+            subscriptionPrice: userData.subscription?.price || 0,
+            subscriptionStart: userData.subscription?.startAt || '',
+            subscriptionEnd: userData.subscription?.endAt || '',
+          };
+          setProfile(mapped);
+          storage.setObject('currentUser', mapped); // optional: update cache
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error('Error loading profile snapshot:', error);
+        setLoading(false);
+      });
+    };
+    setupListener();
+    return () => unsubscribe && unsubscribe();
   }, []);
 
-  const loadProfile = async () => {
-    try {
-      const user = await storage.getObject<UserProfile>('currentUser');
-      if (user) setProfile(user);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      Alert.alert('خطأ', 'فشل تحميل بيانات الملف الشخصي');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // unchanged logic for saving locally
   const saveProfileEverywhere = async (updated: UserProfile) => {
-
     await storage.setObject('currentUser', updated);
-
-
     const allUsers = (await storage.getObject<UserProfile[]>('allUsers')) || [];
     const index = allUsers.findIndex(
       u => u.mobile === updated.mobile
     );
     if (index !== -1) allUsers[index] = updated;
     else allUsers.push(updated);
-
     await storage.setObject('allUsers', allUsers);
-
     setProfile(updated);
   };
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('ar-IQ', {
+    new Date(d).toLocaleDateString('ar', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -92,20 +602,19 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
   const handleEditProfile = () => {
     if (!profile) return;
-    if (!navigation?.navigate) return Alert.alert('خطأ', 'لا يمكن فتح شاشة التعديل');
+    if (!navigation?.navigate) return Alert.alert('خطأ', 'لا يمكن فتح شاشة ا��تعديل');
 
     navigation.navigate('EditProfile', {
       profile,
       onSave: async (updated: UserProfile) => {
         await saveProfileEverywhere(updated);
-        await loadProfile();
+        // ❗️ CHANGED: No need to call loadProfile now, Firestore will update profile automatically
       },
     });
   };
 
   const handleUpgradeSubscription = () => {
     if (!profile) return;
-
     navigation?.navigate?.('PackagesScreen', {
       mode: 'upgrade',
       currentProfile: profile,
@@ -144,37 +653,20 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
   const confirmDeleteAccount = async () => {
     try {
-      console.log("🔥 DELETE START");
-
-      // ⚠️ أهم شيء — نستخدم uid الحقيقي
-      const uid =
-        profile?.uid || profile?.id || auth.currentUser?.uid || null;
-
-      console.log("UID =", uid);
-
+      const uid = profile?.uid || profile?.id || auth.currentUser?.uid || null;
       if (!uid) {
         Alert.alert("خطأ", "لم يتم العثور على معرف المستخدم (UID)");
         return;
       }
-
       const userRef = doc(db, "users", uid);
-      console.log("DOC PATH =", userRef.path);
-
-      // 🧨 حذف الوثيقة من Firestore
       try {
         await deleteDoc(userRef);
-        console.log("✅ FIRESTORE DOC DELETED");
       } catch (err) {
-        console.log("❌ FIRESTORE DELETE ERROR:", err);
         Alert.alert("خطأ", "فشل حذف الحساب من قاعدة البيانات");
         return;
       }
-
-      // 🧹 حذف التخزين المحلي
       await storage.removeItem("currentUser");
       await storage.removeItem("allUsers");
-
-      // 🚪 خروج وإعادة التوجيه
       Alert.alert("تم حذف الحساب", "تم حذف حسابك بنجاح", [
         {
           text: "حسناً",
@@ -188,11 +680,9 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
         },
       ]);
     } catch (e) {
-      console.log("❌ UNKNOWN DELETE ERROR:", e);
       Alert.alert("خطأ", "حدث خطأ غير متوقع أثناء الحذف");
     }
   };
-
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -206,23 +696,18 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
     );
   };
 
-
-
   const handleLogout = async () => {
     try {
       await signOut(auth);          
     } catch (e) {
       console.log("signOut error", e);
     }
-
     await storage.clear();        
-
     navigation?.reset?.({
       index: 0,
       routes: [{ name: "Login" }],
     });
   };
-
 
   if (loading)
     return (
@@ -237,7 +722,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
       <View style={styles.errorContainer}>
         <MaterialCommunityIcons name="alert-circle" size={60} color="#E53E3E" />
         <Text style={styles.errorText}>لم يتم العثور على بيانات الملف الشخصي</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); }}>
           <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
         </TouchableOpacity>
       </View>
@@ -246,13 +731,6 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   const daysRemaining = calculateDaysRemaining(profile.subscriptionEnd);
   const isExpiringSoon = daysRemaining <= 7;
 
-  /* 👇 باقي الكود كما هو — بدون أي تغيير في التصميم */
-  // --- نفس JSX والستايلات التي أرسلتها بالكامل ---
-
-  // (احتفظت بكامل التصميم كما هو — فقط منطق التخزين تم تعديله)
-
-
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -260,7 +738,6 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section - بدون دائرة */}
         <View style={styles.header}>
           <Text style={styles.name}>{profile.name}</Text>
           <View style={styles.jobBadge}>
@@ -326,28 +803,30 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
               value={formatDate(profile.subscriptionEnd)}
             />
 
-            {/* Days Remaining Alert */}
-            <View
-              style={[
-                styles.daysRemainingCard,
-                isExpiringSoon && styles.daysRemainingWarning,
-              ]}
-            >
+            {/* Account Status Section */}
+            <View style={[
+              styles.daysRemainingCard,
+              isAccountActive(profile)
+                ? { backgroundColor: '#C6F6D5' }
+                : { backgroundColor: '#FFD580' }
+            ]}>
               <View style={styles.daysRemainingContent}>
-                <Text style={styles.daysRemainingLabel}>الأيام المتبقية</Text>
-                <Text
-                  style={[
-                    styles.daysRemainingValue,
-                    isExpiringSoon && styles.daysRemainingValueWarning,
-                  ]}
-                >
-                  {daysRemaining > 0 ? `${daysRemaining} يوم` : 'منتهي'}
+                <Text style={styles.daysRemainingLabel}>
+                  حالة الحساب
+                </Text>
+                <Text style={[
+                  styles.daysRemainingValue,
+                  !isAccountActive(profile) && { color: '#FFA500' }
+                ]}>
+                  {isAccountActive(profile)
+                    ? 'الحساب فعال'
+                    : 'الحساب قيد المراجعة من التطبيق'}
                 </Text>
               </View>
               <MaterialCommunityIcons
-                name={isExpiringSoon ? 'alert' : 'check-circle'}
+                name={isAccountActive(profile) ? "check-circle" : "progress-clock"}
                 size={24}
-                color={isExpiringSoon ? '#E53E3E' : '#48BB78'}
+                color={isAccountActive(profile) ? "#48BB78" : "#FFA500"}
               />
             </View>
           </View>
@@ -378,13 +857,11 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             <Text style={styles.sectionTitle}>إعدادات الحساب</Text>
             <MaterialCommunityIcons name="cog" size={24} color="#718096" />
           </View>
-
           <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
             <MaterialCommunityIcons name="chevron-left" size={22} color="#CBD5E0" />
             <Text style={styles.actionButtonText}>تسجيل الخروج</Text>
             <MaterialCommunityIcons name="logout" size={22} color="#FF9800" />
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.actionButton, styles.dangerButton]}
             onPress={handleDeleteAccount}
@@ -396,7 +873,6 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             <MaterialCommunityIcons name="delete-forever" size={22} color="#E53E3E" />
           </TouchableOpacity>
         </View>
-
         {/* Footer Info */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>نسخة التطبيق 1.0.0</Text>
@@ -425,6 +901,8 @@ const InfoRow = ({
     <MaterialCommunityIcons name={icon as any} size={20} color="#FF9800" />
   </View>
 );
+
+
 
 const styles = StyleSheet.create({
   container: {
