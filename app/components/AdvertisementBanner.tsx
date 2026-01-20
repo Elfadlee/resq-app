@@ -32,37 +32,17 @@ type Advertisement = {
 const DEFAULT_ADS: Advertisement[] = [
   {
     id: '1',
-    name: 'محمد الفضلي',
-    profession: 'كهربائي',
+    name: 'ناجح الفضلي', 
+    profession: 'مبرمج', 
     location: 'منطقة كربلاء',
-    phone: '+964 770 123 4567',
-    whatsapp: '9647701234567',
+    phone: '+447377767774', 
+    whatsapp: '+447377767774', 
     color: '#FF9800',
-    description: 'خدمات كهربائية متكاملة - صيانة وتركيب',
+    description: 'عمل مواقع الانترنت وتطبيقات الموبايل ', 
     crown: true,
   },
-  {
-    id: '2',
-    name: 'علي حسن',
-    profession: 'سباك',
-    location: 'منطقة بغداد',
-    phone: '+964 771 234 5678',
-    whatsapp: '9647712345678',
-    color: '#FF9800',
-    description: 'إصلاح وتركيب جميع أنواع السباكة',
-    crown: true,
-  },
-  {
-    id: '3',
-    name: 'أحمد كريم',
-    profession: 'نجار',
-    location: 'منطقة النجف',
-    phone: '+964 772 345 6789',
-    whatsapp: '9647723456789',
-    color: '#FF9800',
-    description: 'تفصيل وتصليح الأثاث المنزلي',
-    crown: true,
-  }
+
+
 ];
 
 const AdvertisementBanner = () => {
@@ -90,9 +70,14 @@ const AdvertisementBanner = () => {
         allUsers.push({ id: doc.id, ...doc.data() });
       });
 
-      const businessUsers = allUsers.filter(
-        u => u?.subscription?.package === 'business'
-      );
+   const businessUsers = allUsers.filter(
+  u =>
+    u?.subscription?.package === 'business' &&
+    u?.subscription?.isActive === true &&
+    u?.ad?.status === 'approved' &&
+    u?.ad?.isVisible === true
+);
+
 
       if (businessUsers.length > 0) {
         const ads: Advertisement[] = businessUsers.map(user => {
@@ -327,9 +312,9 @@ const styles = StyleSheet.create({
 
   description: {
     fontFamily: 'Almarai-Regular',
-    fontSize: 13,
+    fontSize: 11,
     textAlign: 'right',
-    lineHeight: 14,
+    lineHeight: 16,
     color: '#666',
     marginVertical: 10,
     marginHorizontal: 10,

@@ -31,6 +31,10 @@ type User = {
     endAt?: string;
     isActive?: boolean;
   };
+  ad?: {
+    status?: string;
+    isVisible?: boolean;
+  };
 };
 
 type SearchResultsScreenProps = {
@@ -102,8 +106,12 @@ export default function SearchResultsScreen(props: SearchResultsScreenProps) {
         const areaOk = !ar || ua === ar;
 
         const active = u.subscription?.isActive === true;
+        const adAllowed =
+          u.subscription?.package === "basic" ||
+          (u.ad?.status === "approved" && u.ad?.isVisible === true);
 
-        return jobOk && areaOk && active;
+        return jobOk && areaOk && active && adAllowed;
+
       });
 
 

@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
   },
   description: {
     fontFamily: 'Almarai-Regular',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 10,
+    lineHeight: 16,
     textAlign: 'right',
     marginBottom: 4,
   },

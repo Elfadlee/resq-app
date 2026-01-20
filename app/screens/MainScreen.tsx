@@ -113,7 +113,9 @@ export default function MainScreen({
 
           if (
             u.subscription?.isActive === true &&
-            u.subscription?.package === "pro"
+            u.subscription?.package === "pro" &&
+            u.ad?.status === "approved" &&
+            u.ad?.isVisible === true
           ) {
             users.push(u);
           }
@@ -169,16 +171,16 @@ export default function MainScreen({
               }}
             />
 
-         {proUsers.map((item) => (
-      <ServiceCard
-        key={item.id}
-        name={item.name}
-        jobTitle={item.jobTitle}
-        description={item.description}
-        phone={item.phone || item.mobile}
-        area={item.area}
-        subscription={item.subscription}
-  />
+            {proUsers.map((item) => (
+              <ServiceCard
+                key={item.id}
+                name={item.name}
+                jobTitle={item.jobTitle}
+                description={item.description}
+                phone={item.phone || item.mobile}
+                area={item.area}
+                subscription={item.subscription}
+              />
             ))}
           </ScrollView>
         )}

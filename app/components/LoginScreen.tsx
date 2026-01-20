@@ -1,11 +1,17 @@
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from '../services/firestore'; // تأكد أن db = getFirestore(app)
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../services/firestore";
+
 import React, { useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, TouchableWithoutFeedback } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppleLoginButton from "./AppleLoginButton";
 import storage from "../services/storage-helper";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../services/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { signOut } from "firebase/auth";
+
+
 
 
 
@@ -18,68 +24,148 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navigation }: LoginScreenProps) {
-    const [mobile, setMobile] = useState("");
+    // const [mobile, setMobile] = useState("");
+    // const [password, setPassword] = useState("");
+    const [email, setEmail] = useState("");
+    const [emailError, setEmailError] = useState("");
     const [password, setPassword] = useState("");
+
     const [showPassword, setShowPassword] = useState(false);
-    const [mobileError, setMobileError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [forgotVisible, setForgotVisible] = useState(false);
     const [resetEmail, setResetEmail] = useState("");
     const [resetError, setResetError] = useState("");
 
+    // const handleLogin = async () => {
+    //     setMobileError("");
+    //     setPasswordError("");
+
+    //     if (mobile.length < 10) {
+    //         setMobileError("رقم الجوال يجب أن يكون 10 أرقام");
+    //         return;
+    //     }
+
+    //     if (password.length < 8) {
+    //         setPasswordError("كلمة المرور يجب أن تكون 8 أحرف أو أكثر");
+    //         return;
+    //     }
+
+    //     try {
+    //         const cleanMobile = mobile.replace(/\s+/g, "");
+
+    //         const q = query(
+    //             collection(db, "users"),
+    //             where("mobile", "==", "+964" + cleanMobile),
+    //             where("password", "==", password)
+    //         );
+    //         const querySnapshot = await getDocs(q);
+
+    //         if (querySnapshot.empty) {
+    //             setPasswordError("رقم الجوال أو كلمة المرور غير صحيحة");
+    //             return;
+    //         }
+
+    //         // Get the first user document data
+    //         const userDoc = querySnapshot.docs[0];
+    //         const userData = { id: userDoc.id, ...userDoc.data() };
+
+    //         await storage.setObject("currentUser", userData);
+    //         goToProfile?.(userData)
+    //         console.log("GO TO PROFILE FROM MOBILE", userData);
+
+
+    //     } catch (e) {
+    //         setPasswordError("خطأ أثناء تسجيل الدخول");
+    //     }
+    // };
     const handleLogin = async () => {
-        setMobileError("");
+        setEmailError("");
         setPasswordError("");
 
-        if (mobile.length < 10) {
-            setMobileError("رقم الجوال يجب أن يكون 10 أرقام");
+        const emailValue = email.trim();
+        const pass = password;
+
+        if (!emailValue || !emailValue.includes("@")) {
+            setEmailError("الرجاء إدخال بريد إلكتروني صحيح");
             return;
         }
 
-        if (password.length < 8) {
+        if (pass.length < 8) {
             setPasswordError("كلمة المرور يجب أن تكون 8 أحرف أو أكثر");
             return;
         }
 
         try {
-            const cleanMobile = mobile.replace(/\s+/g, "");
+            const cred = await signInWithEmailAndPassword(
+                auth,
+                emailValue,
+                pass
+            );
+            const userRef = doc(db, "users", cred.user.uid);
+            const snap = await getDoc(userRef);
 
-                    const q = query(
-                    collection(db, "users"),
-                    where("mobile", "==", "+964" + cleanMobile),
-                    where("password", "==", password)
-                    );
-                    const querySnapshot = await getDocs(q);
-
-                    if (querySnapshot.empty) {
-                        setPasswordError("رقم الجوال أو كلمة المرور غير صحيحة");
-                        return;
-                    }
-
-                    // Get the first user document data
-                    const userDoc = querySnapshot.docs[0];
-                    const userData = { id: userDoc.id, ...userDoc.data() };
-
-                    await storage.setObject("currentUser", userData);
-                    goToProfile?.(userData)
-                    console.log("GO TO PROFILE FROM MOBILE", userData);
+            if (!snap.exists()) {
+                await signOut(auth); // 🔒 تنظيف الجلسة
+                setPasswordError("لا يوجد حساب مسجل بهذا البريد");
+                return; // ⬅️ يبقى في صفحة اللوقن
+            }
 
 
-        } catch (e) {
-            setPasswordError("خطأ أثناء تسجيل الدخول");
+            const userData = {
+                id: snap.id,
+                uid: snap.id,
+                ...snap.data(),
+            };
+
+            await storage.setObject("currentUser", userData);
+            goToProfile?.(userData);
+
+
+        } catch (error: any) {
+            if (
+                error.code === "auth/user-not-found" ||
+                error.code === "auth/wrong-password"
+            ) {
+                setPasswordError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+            } else if (error.code === "auth/invalid-email") {
+                setEmailError("البريد الإلكتروني غير صالح");
+            } else {
+                setPasswordError("حدث خطأ أثناء تسجيل الدخول");
+            }
         }
     };
 
 
-    const handleReset = () => {
+
+    const handleReset = async () => {
         setResetError("");
-        if (!resetEmail.includes("@")) {
+
+        if (!resetEmail || !resetEmail.includes("@")) {
             setResetError("الرجاء إدخال بريد إلكتروني صحيح");
             return;
         }
-        setForgotVisible(false);
-        setResetEmail("");
+
+        try {
+            await sendPasswordResetEmail(auth, resetEmail.trim());
+
+            alert("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
+
+            setForgotVisible(false);
+            setResetEmail("");
+
+        } catch (error: any) {
+            console.log("RESET ERROR:", error);
+
+            if (error.code === "auth/user-not-found") {
+                setResetError("هذا البريد غير مسجل لدينا");
+            } else if (error.code === "auth/invalid-email") {
+                setResetError("البريد الإلكتروني غير صالح");
+            } else {
+                setResetError("حدث خطأ، حاول مرة أخرى");
+            }
+        }
     };
+
 
     return (
         <View style={styles.container}>
@@ -93,28 +179,34 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                                     isSocialSignup: true,
                                 });
                             }}
-                             onGoToProfile={goToProfile}
+                            onGoToProfile={goToProfile}
                         />
                     </View>
                 )}
                 <View style={styles.card}>
                     <MaterialCommunityIcons name="login" size={42} color="#FF9800" />
                     <Text style={styles.title}>تسجيل الدخول</Text>
-                    <Text style={styles.subtitle}>أدخل رقم الجوال وكلمة المرور</Text>
+                    <Text style={styles.subtitle}>أدخل البريد الإلكتروني وكلمة المرور</Text>
                     {/* رقم الجوال */}
-                    <Text style={styles.label}>رقم الجوال</Text>
+
+                    <Text style={styles.label}>البريد الإلكتروني</Text>
+
                     <View style={styles.inputWrapper}>
-                        <Text style={styles.prefix}>+964</Text>
                         <TextInput
-                            value={mobile}
-                            onChangeText={setMobile}
-                            keyboardType="number-pad"
-                            placeholder="770 123 4567"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            placeholder="example@email.com"
+                            placeholderTextColor="#999"
                             style={styles.input}
                             textAlign="right"
+                            autoCapitalize="none"
                         />
                     </View>
-                    {mobileError !== "" && <Text style={styles.error}>{mobileError}</Text>}
+
+                    {emailError !== "" && <Text style={styles.error}>{emailError}</Text>}
+
+
 
                     <Text style={styles.label}>كلمة المرور</Text>
                     <View style={styles.inputWrapper}>
@@ -133,14 +225,19 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
                             placeholder="أدخل كلمة المرور"
+                            placeholderTextColor="#999"
                             style={styles.input}
                             textAlign="right"
                         />
                     </View>
                     {passwordError !== "" && <Text style={styles.error}>{passwordError}</Text>}
 
-                    <TouchableOpacity onPress={() => setForgotVisible(true)} style={styles.forgotButton}>
-                        <Text style={styles.forgetText}>نسيت كلمة المرور؟</Text>
+                    <TouchableOpacity
+                        onPress={() => setForgotVisible(true)}
+                        style={[styles.forgotButton, { alignSelf: "flex-start" }]}
+                    >
+
+                        <Text style={styles.forgetText}>نسيت كلمة المرور ؟</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin}>
                         <MaterialCommunityIcons name="login" size={20} color="#fff" />
@@ -153,34 +250,76 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
                 </View>
             </ScrollView>
             {/* Forgot Password Modal */}
-            <Modal visible={forgotVisible} transparent animationType="fade" onRequestClose={() => setForgotVisible(false)}>
+
+            <Modal
+                visible={forgotVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setForgotVisible(false)}
+            >
+                {/* Overlay */}
                 <TouchableWithoutFeedback onPress={() => setForgotVisible(false)}>
                     <View style={styles.overlay} />
                 </TouchableWithoutFeedback>
+
+                {/* Modal Card */}
                 <View style={styles.modalCard}>
-                    <MaterialCommunityIcons name="lock-reset" size={40} color="#FF9800" />
+                    <MaterialCommunityIcons
+                        name="lock-reset"
+                        size={40}
+                        color="#FF9800"
+                    />
+
                     <Text style={styles.title}>نسيت كلمة المرور</Text>
-                    <Text style={styles.subtitle}>أدخل بريدك الإلكتروني لإعادة التعيين</Text>
+
+                    <Text
+                        style={[
+                            styles.subtitle,
+                            { textAlign: "right", writingDirection: "rtl" },
+                        ]}
+                    >
+                        أدخل بريدك الإلكتروني لإعادة التعيين
+                    </Text>
+
                     <Text style={styles.label}>البريد الإلكتروني</Text>
+
                     <View style={styles.inputWrapper}>
                         <TextInput
                             value={resetEmail}
                             onChangeText={setResetEmail}
                             placeholder="example@email.com"
+                            placeholderTextColor="#999"
                             style={styles.input}
                             textAlign="right"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
                         />
                     </View>
-                    {resetError !== "" && <Text style={styles.error}>{resetError}</Text>}
-                    <TouchableOpacity style={styles.primaryBtn} onPress={handleReset}>
-                        <MaterialCommunityIcons name="email-send" size={20} color="#fff" />
+
+                    {resetError !== "" && (
+                        <Text style={styles.error}>{resetError}</Text>
+                    )}
+
+                    <TouchableOpacity
+                        style={styles.primaryBtn}
+                        onPress={handleReset}
+                        activeOpacity={0.8}
+                    >
+
                         <Text style={styles.primaryText}>إرسال الرابط</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setForgotVisible(false)} style={{ marginTop: 6 }}>
-                        <Text style={styles.forgetText}>إغلاق</Text>
+
+                    <TouchableOpacity
+                        onPress={() => setForgotVisible(false)}
+                        style={styles.closeBtn}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.closeText}>إغلاق</Text>
                     </TouchableOpacity>
                 </View>
             </Modal>
+
+
         </View>
     );
 }
@@ -190,6 +329,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
     content: { flexGrow: 1, padding: 20, justifyContent: "center" },
+
 
     card: {
         backgroundColor: "#fff",
@@ -246,6 +386,8 @@ const styles = StyleSheet.create({
         fontFamily: "Almarai",
         fontSize: 12,
         color: "#FF9800",
+        marginTop: 6,
+        marginBottom: 6,
     },
 
     primaryBtn: {
@@ -264,6 +406,7 @@ const styles = StyleSheet.create({
         fontFamily: "Almarai",
         fontSize: 15,
         color: "#fff",
+
     },
 
     secondaryBtn: {
@@ -292,13 +435,28 @@ const styles = StyleSheet.create({
 
     modalCard: {
         position: "absolute",
+        top: "30%",
         alignSelf: "center",
-        top: "25%",
         backgroundColor: "#fff",
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 22,
         width: "85%",
         maxWidth: 420,
         alignItems: "center",
+        gap: 12,
+        elevation: 6,
+    },
+    closeBtn: {
+        marginTop: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 26,
+        borderRadius: 10,
+        backgroundColor: "#f5f5f5",
+    },
+
+    closeText: {
+        fontFamily: "Almarai",
+        fontSize: 13,
+        color: "#FF9800",
     },
 });

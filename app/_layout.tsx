@@ -8,6 +8,8 @@ import AppFooter from "./components/AppFooter";
 import AppHeader from "./components/AppHeader";
 import AppDrawer from "./components/AppDrawer";
 import MainScreen from "./screens/MainScreen";
+import { AlertProvider } from "./context/AlertContext";
+
 
 export default function RootLayout() {
   const fontsLoaded = useAppFonts();
@@ -68,9 +70,11 @@ export default function RootLayout() {
   }
 
   return (
+    
     <SafeAreaProvider>
+      <AlertProvider>
       <PaperProvider theme={theme}>
-
+        
         {/* HEADER */}
         <SafeAreaView style={{ backgroundColor: "#0A3A5B" }}>
           <AppHeader onMenuOpen={() => setDrawerOpen(true)} />
@@ -107,6 +111,8 @@ export default function RootLayout() {
         </View>
 
       </PaperProvider>
+      </AlertProvider>
     </SafeAreaProvider>
+    
   );
 }

@@ -17,6 +17,8 @@ import { db } from '../services/firestore';
 import { auth } from '../services/firestore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { buy } from "../services/iap";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+
 
 
 const PRODUCT_MAP = {
@@ -33,14 +35,16 @@ const PRODUCT_MAP = {
     quarterly: "rizq.business.quarterly",
   },
   trial_auto_renew: {
-    quarterly: "rizq.basic.quarterly_free"
-  }
-}
+    quarterly: "rizq.basic.quarterly.free",
+  },
+};
+
 
 type PackagesScreenProps = {
   registrationData: any;
   onConfirm: (packageData: any) => void;
   onBack: () => void;
+  onNavigate: (route: string, section?: "privacy" | "terms" | "subscriptions") => void;
 };
 
 type SubscriptionPackage = {
@@ -64,10 +68,11 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     monthlyPrice: 0,
     quarterlyPrice: 0,
     features: [
-      '3 شهور مجانا',
-      'يتجدد تلقائياً ب25 دولار كل 3 شهور بعد انتهاء التجربة',
-      'إلغاء الاشتراك في أي وقت',
-      'جميع مميزات باقة احترافي',
+      'يتجدد تلقائيًا بعد انتهاء الفترة',
+      'يمكن إلغاء الاشتراك في أي وقت',
+      'يظهر في نتائج البحث بعد الضغط على زر البحث',
+      'لا يظهر في الشاشه الرئيسيه',
+      'أولوية الظهور: بعد باقتي أعمال واحترافي',
     ],
   },
   {
@@ -76,13 +81,15 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     nameAr: 'أساسي',
     icon: 'star-outline',
     color: '#2196F3',
-    monthlyPrice: 7,
-    quarterlyPrice: 20,
+    monthlyPrice: 9,
+    quarterlyPrice: 25,
     features: [
-      'عرض الملف الشخصي',
-      'استقبال 10 طلبات شهرياً',
-      'دعم فني أساسي',
-      'إشعارات الطلبات',
+      'يتجدد تلقائيًا بعد انتهاء الفترة',
+      'يمكن إلغاء الاشتراك في أي وقت',
+      'يظهر في نتائج البحث بعد الضغط على زر البحث',
+      'لا يظهر في الشاشه الرئيسيه',
+      'أولوية الظهور: بعد باقتي الاعمال واحترافي',
+      'عدد غير محدود من الطلبات ',
     ],
   },
   {
@@ -94,11 +101,11 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     monthlyPrice: 25,
     quarterlyPrice: 70,
     features: [
-      'جميع مميزات الباقة الأساسية',
-      'استقبال طلبات غير محدودة',
-      'ظهور مميز في نتائج البحث',
-      'دعم فني ذو أولوية',
-      'إحصائيات تفصيلية',
+      'يتجدد تلقائيًا بعد انتهاء الفترة',
+      'يمكن إلغاء الاشتراك في أي وقت',
+      'يظهر في الصفحة الرئيسية تحت زر البحث',
+      'أولوية الظهور: بعد باقة الاعمال',
+      'عدد غير محدود من الطلبات ',
     ],
   },
   {
@@ -110,25 +117,37 @@ const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
     monthlyPrice: 75,
     quarterlyPrice: 200,
     features: [
-      'جميع مميزات الباقة الاحترافية',
-      'أولوية قصوى في نتائج البحث',
-      'إعلانات مميزة',
-      'مدير حساب مخصص',
-      'تقارير شهرية',
+      'يتجدد تلقائيًا بعد انتهاء الفترة',
+      'يمكن إلغاء الاشتراك في أي وقت',
+      'يظهر في بنر الإعلانات في الصفحة الرئيسية',
+      'الأولوية الاعلي في نتائج البحث',
+      'عدد غير محدود من الطلبات ',
     ],
   },
 ];
+
+
+
 
 export default function PackagesScreen({
   registrationData,
   onConfirm,
   onBack,
+  onNavigate,
 }: PackagesScreenProps) {
 
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] =
     useState<'monthly' | 'quarterly'>('monthly');
   const [acceptPolicy, setAcceptPolicy] = useState(false);
+  const hasPreviousSubscription =
+    !!registrationData?.subscription?.package &&
+    registrationData.subscription.package !== 'trial_auto_renew';
+  const visiblePackages = SUBSCRIPTION_PACKAGES.filter(pkg => {
+    if (pkg.id === 'trial_auto_renew' && hasPreviousSubscription) return false;
+    return true;
+  });
+
 
   const handleConfirm = async () => {
     Keyboard.dismiss();
@@ -142,6 +161,16 @@ export default function PackagesScreen({
       Alert.alert('خطأ', 'يرجى الموافقة على سياسة الخصوصية');
       return;
     }
+
+    if (selectedPackage === 'trial_auto_renew' && hasPreviousSubscription) {
+      Alert.alert(
+        'غير متاح',
+        'لا يمكن تفعيل الباقة التجريبية أكثر من مرة'
+      );
+      return;
+    }
+
+
 
     const pkg = SUBSCRIPTION_PACKAGES.find(p => p.id === selectedPackage);
 
@@ -163,7 +192,7 @@ export default function PackagesScreen({
         : endAt.setMonth(endAt.getMonth() + 3);
     }
 
-   if (pkg?.id !== "trial_auto_renew") {
+    if (pkg?.id !== "trial_auto_renew") {
       const productMapEntry = PRODUCT_MAP[pkg!.id as keyof typeof PRODUCT_MAP];
       const productId =
         selectedDuration in productMapEntry
@@ -180,6 +209,24 @@ export default function PackagesScreen({
     }
 
 
+    // ✅ (لا يمس Apple) هذا فقط للي يسجل يدوي Email/Password
+ let authUser = auth.currentUser;
+
+// ✅ فقط إذا التسجيل Email/Password
+if (
+  !authUser &&
+  registrationData?.signupType === "manual" &&
+  registrationData?.email &&
+  registrationData?.password
+) {
+  const cred = await createUserWithEmailAndPassword(
+    auth,
+    registrationData.email.trim(),
+    registrationData.password
+  );
+  authUser = cred.user;
+}
+
 
     const userData = {
       ...registrationData,
@@ -187,11 +234,15 @@ export default function PackagesScreen({
         package: pkg?.id || "basic",
         packageName: pkg?.nameAr || "أساسي",
         duration: selectedDuration,
-        price: price || 7,
+        price: price || 0,
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
-        isActive: false,
+        isActive: true,
+        status: "active",
+      },
+      ad: {
         status: "pending",
+        isVisible: false,
       },
       status: { approved: true, suspended: false },
       metadata: {
@@ -204,18 +255,19 @@ export default function PackagesScreen({
     try {
       let userId: string | null = null;
 
-      // إذا كان فعلاً يوجد مستخدم داخل من Apple / Google
-      if (auth.currentUser?.uid) {
-        userId = auth.currentUser.uid;
+      if (authUser?.uid) {
+        userId = authUser.uid;
       }
 
 
-      if (!userId) {
-        const docRef = await addDoc(collection(db, "users"), userData);
-        userId = docRef.id;
-      } else {
-        await setDoc(doc(db, "users", userId), userData, { merge: true });
-      }
+
+  if (!userId) {
+  Alert.alert("خطأ", "لا يوجد مستخدم مصادق عليه");
+  return;
+}
+
+await setDoc(doc(db, "users", userId), userData, { merge: true });
+
 
       const cachedUser = {
         id: userId,
@@ -233,23 +285,7 @@ export default function PackagesScreen({
       await AsyncStorage.setItem("currentUser", JSON.stringify(cachedUser));
       await AsyncStorage.setItem("userProfile", JSON.stringify(cachedUser));
 
-      await setDoc(
-        doc(db, "lookup_professions", registrationData.jobTitle),
-        { count: increment(1) },
-        { merge: true }
-      );
 
-      await setDoc(
-        doc(db, "lookup_areas", registrationData.area),
-        { count: increment(1) },
-        { merge: true }
-      );
-
-      await setDoc(
-        doc(db, "lookup_packages", userData.subscription.package),
-        { count: increment(1) },
-        { merge: true }
-      );
 
       onConfirm(cachedUser);
 
@@ -333,9 +369,9 @@ export default function PackagesScreen({
             </View>
 
             <View style={styles.packagesContainer}>
-              {SUBSCRIPTION_PACKAGES.map((pkg) => {
+              {visiblePackages.map((pkg) => {
                 const isSelected = selectedPackage === pkg.id;
-                // حدد السعر والنص حسب نوع الباقة
+
                 const displayedPrice =
                   pkg.id === 'trial_auto_renew'
                     ? "مجانا"
@@ -473,12 +509,19 @@ export default function PackagesScreen({
                 />
               )}
             </View>
-            <Text style={styles.policyText}>
-              أوافق على{' '}
-              <Text style={styles.policyLink}>
-                سياسة الخصوصية والشروط
-              </Text>
+            <Text
+              style={styles.policyLink}
+              onPress={() => {
+                Alert.alert(
+                  "سياسة الخصوصية",
+                  "تقدر تشوف سياسة الخصوصية من القائمة الجانبية"
+                );
+              }}
+            >
+              سياسة الخصوصية والشروط
             </Text>
+
+
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -654,7 +697,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   packageRight: { alignItems: 'flex-end' },
-  packagePriceAmount: { fontSize: 28, fontFamily: 'Almarai-Bold' },
+  packagePriceAmount: { fontSize: 28, fontFamily: 'Almarai-Bold', marginTop: 22, },
   packagePricePeriod: {
     fontSize: 12,
     fontFamily: 'Almarai-Regular',
