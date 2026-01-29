@@ -118,7 +118,8 @@ export default function RegistrationScreen({
         setAreasFromDb(areas);
       } catch (e) {
         console.log('Lookup load error:', e);
-        // (No UI change) — lists might stay empty if Firestore rules/index missing
+
+
       }
     };
 
@@ -185,56 +186,6 @@ export default function RegistrationScreen({
 
 
 
-  // useEffect(() => {
-  //   const checkForDuplicates = async () => {
-  //     setCheckingDuplicate(true);
-  //     let foundMobile: string | null = null;
-  //     let foundEmail: string | null = null;
-  //     let errorMsg = '';
-
-
-  //     if (mobile && mobile.length === 10) {
-  //       const mobQuery = query(
-  //         collection(db, 'users'),
-  //         where('mobile', '==', '+964' + convertArabicToEnglish(mobile))
-  //       );
-  //       const mobSnap = await getDocs(mobQuery);
-  //       if (!mobSnap.empty) {
-  //         foundMobile = '+964' + convertArabicToEnglish(mobile);
-  //         errorMsg += `رقم الجوال مستخدم سابقاً `;
-  //       }
-  //     }
-  //     // تحقق الإيميل
-  //     if (email && email.includes('@')) {
-  //       const emQuery = query(collection(db, 'users'), where('email', '==', email.trim()));
-  //       const emSnap = await getDocs(emQuery);
-  //       if (!emSnap.empty) {
-  //         foundEmail = email.trim();
-  //         errorMsg += `البريد الإلكتروني مستخدم سابقاً: ${foundEmail}\n`;
-  //       }
-  //     }
-  //     setDuplicateMobile(foundMobile);
-  //     setDuplicateEmail(foundEmail);
-  //     setDuplicateError(errorMsg ? errorMsg.trim() : null);
-  //     setCheckingDuplicate(false);
-  //   };
-
-  //   if (
-  //     (mobile && mobile.length === 10) ||
-  //     (email && email.includes('@') && email.trim().length > 0)
-  //   ) {
-  //     checkForDuplicates();
-  //   } else {
-  //     setDuplicateError(null);
-  //     setDuplicateMobile(null);
-  //     setDuplicateEmail(null);
-  //   }
-  // }, [mobile, email]);
-
-
-
-
-  // ============ Immediate Validation Logic for UX =============
   const isNameValid = !!name.trim();
   const isJobValid = !!jobTitle;
   const isAreaValid = !!area;
@@ -243,9 +194,7 @@ export default function RegistrationScreen({
   const isPasswordValid = isEnglishPassword(password) && password.length >= 8 && !passwordLangError;
   const isConfirmPasswordValid = password === confirmPassword && confirmPassword.length > 0;
   const isDescriptionValid = wordCount <= 120;
-  // ============ END validation
 
-  // ============ UX: Auto next focus, and on-screen check icon =============
   const handleMobileChange = (text: string) => {
     if (!isEnglishNumbers(text)) {
       setMobileLangError('يرجى إدخال الأرقام بالإنجليزية فقط');
@@ -279,7 +228,7 @@ export default function RegistrationScreen({
       setTimeout(() => descriptionInputRef.current?.focus(), 150);
     }
   };
-  // ============ END UX
+
 
   const handleNext = async () => {
     Keyboard.dismiss();
@@ -328,7 +277,7 @@ export default function RegistrationScreen({
       return;
     }
 
-    const englishPassword = password; // المستخدم مطلوب يكتب انجليزي فقط (لا تحويل)
+    const englishPassword = password; 
     const englishMobile = mobile;
     const draftData = {
       name: name.trim(),
@@ -566,7 +515,7 @@ export default function RegistrationScreen({
                 // onBlur={() => setFocusedField(null)}
                 onBlur={() => {
                   setFocusedField(null);
-                  checkDuplicatesAfterFinish(false, true); // ✅ افحص الإيميل بعد الانتهاء
+                  checkDuplicatesAfterFinish(false, true); 
                 }}
 
                 returnKeyType="next"
@@ -599,7 +548,7 @@ export default function RegistrationScreen({
             )}
           </View>
 
-          {/* كلمة المرور الجديدة */}
+      
           <View style={styles.inputContainer}>
             <Text style={styles.label}>كلمة المرور الجديدة</Text>
             <View
@@ -730,7 +679,7 @@ export default function RegistrationScreen({
             )}
           </View>
 
-          {/* الوصف */}
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>الوصف</Text>
             <View
@@ -801,7 +750,7 @@ export default function RegistrationScreen({
         </View>
       </View>
 
-      {/* مودال الوظيفة */}
+
       <Modal
         visible={jobMenuVisible}
         transparent
@@ -823,7 +772,6 @@ export default function RegistrationScreen({
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>اختر المهنة</Text>
 
-            {/* ✅ ONLY CHANGE: data source */}
             <FlatList
               data={jobsFromDb}
               keyExtractor={(item) => item}
@@ -846,7 +794,6 @@ export default function RegistrationScreen({
         </TouchableOpacity>
       </Modal>
 
-      {/* مودال المنطقة */}
       <Modal
         visible={areaMenuVisible}
         transparent
@@ -868,7 +815,6 @@ export default function RegistrationScreen({
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>اختر المنطقة</Text>
 
-            {/* ✅ ONLY CHANGE: data source */}
             <FlatList
               data={areasFromDb}
               keyExtractor={(item) => item}

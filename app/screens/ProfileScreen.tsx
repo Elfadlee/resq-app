@@ -209,6 +209,10 @@ export default function ProfileScreen() {
             registrationData={registrationData}
             onConfirm={handlePackageConfirm}
             onBack={() => setCurrentScreen("register")}
+            onNavigate={(route: string, section?: "privacy" | "terms" | "subscriptions") => {
+            
+              setCurrentScreen(route as any);
+            }}
           />
         );
 
@@ -231,6 +235,10 @@ export default function ProfileScreen() {
             registrationData={currentUser}
             onConfirm={() => setCurrentScreen("profile")}
             onBack={() => setCurrentScreen("profile")}
+            onNavigate={(route: string, section?: "privacy" | "terms" | "subscriptions") => {
+           
+              setCurrentScreen(route as any);
+            }}
           />
         );
 
@@ -244,18 +252,9 @@ export default function ProfileScreen() {
 
   return (
     <React.Fragment>
-      {/* HEADER نفس MainScreen */}
-
-
-      {/* المحتوى مع سكرول فقط */}
-      <ScrollView contentContainerStyle={{ flexGrow: 1, backgroundColor: '#f5f5f5' }}>
+     
         {renderScreen()}
-      </ScrollView>
 
-      {/* FOOTER نفس MainScreen */}
-
-
-      {/* Drawer دائماً خارج */}
       <AppDrawer
         visible={drawerOpen}
         onClose={() => setDrawerOpen(false)}

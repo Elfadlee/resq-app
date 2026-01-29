@@ -1,15 +1,13 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firestore";
 
-import React, { useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, TouchableWithoutFeedback } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import AppleLoginButton from "./AppleLoginButton";
-import storage from "../services/storage-helper";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import React, { useState } from "react";
+import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 import { auth } from "../services/firestore";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { signOut } from "firebase/auth";
+import storage from "../services/storage-helper";
+import AppleLoginButton from "./AppleLoginButton";
 
 
 
@@ -18,14 +16,12 @@ import { signOut } from "firebase/auth";
 interface LoginScreenProps {
     onLogin?: (mobile: string, password: string, isSocial: boolean) => void;
     onGoToRegister?: (data?: any) => void;
-    // goToProfile?: () => void;
     goToProfile?: (user: any) => void;
     navigation?: { navigate: (screen: string) => void };
 }
 
 export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navigation }: LoginScreenProps) {
-    // const [mobile, setMobile] = useState("");
-    // const [password, setPassword] = useState("");
+
     const [email, setEmail] = useState("");
     const [emailError, setEmailError] = useState("");
     const [password, setPassword] = useState("");
@@ -36,48 +32,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
     const [resetEmail, setResetEmail] = useState("");
     const [resetError, setResetError] = useState("");
 
-    // const handleLogin = async () => {
-    //     setMobileError("");
-    //     setPasswordError("");
 
-    //     if (mobile.length < 10) {
-    //         setMobileError("رقم الجوال يجب أن يكون 10 أرقام");
-    //         return;
-    //     }
-
-    //     if (password.length < 8) {
-    //         setPasswordError("كلمة المرور يجب أن تكون 8 أحرف أو أكثر");
-    //         return;
-    //     }
-
-    //     try {
-    //         const cleanMobile = mobile.replace(/\s+/g, "");
-
-    //         const q = query(
-    //             collection(db, "users"),
-    //             where("mobile", "==", "+964" + cleanMobile),
-    //             where("password", "==", password)
-    //         );
-    //         const querySnapshot = await getDocs(q);
-
-    //         if (querySnapshot.empty) {
-    //             setPasswordError("رقم الجوال أو كلمة المرور غير صحيحة");
-    //             return;
-    //         }
-
-    //         // Get the first user document data
-    //         const userDoc = querySnapshot.docs[0];
-    //         const userData = { id: userDoc.id, ...userDoc.data() };
-
-    //         await storage.setObject("currentUser", userData);
-    //         goToProfile?.(userData)
-    //         console.log("GO TO PROFILE FROM MOBILE", userData);
-
-
-    //     } catch (e) {
-    //         setPasswordError("خطأ أثناء تسجيل الدخول");
-    //     }
-    // };
     const handleLogin = async () => {
         setEmailError("");
         setPasswordError("");
@@ -148,7 +103,9 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
         try {
             await sendPasswordResetEmail(auth, resetEmail.trim());
 
-            alert("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
+            alert(
+                "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.\n\nيرجى التحقق من مجلد الرسائل غير المرغوب فيها (Junk / Spam) في حال لم يظهر في صندوق الوارد."
+            );
 
             setForgotVisible(false);
             setResetEmail("");
@@ -328,7 +285,13 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    content: { flexGrow: 1, padding: 20, justifyContent: "center" },
+    content: {
+        flexGrow: 1,
+        padding: 20,
+        paddingTop: 60,
+        paddingBottom: 80,
+    },
+
 
 
     card: {

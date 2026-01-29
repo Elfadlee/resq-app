@@ -17,6 +17,8 @@ import storage from '../services/storage-helper';
 import { deleteDoc, doc, onSnapshot } from "firebase/firestore";        // ❗️ CHANGED: Added onSnapshot here
 import { db, auth } from "../services/firestore";
 import { signOut } from "firebase/auth";
+import { updateDoc } from "firebase/firestore";
+
 
 
 
@@ -54,21 +56,31 @@ type ProfileBannerProps = {
   navigation: any;
   onRefresh?: () => void;
 };
+const SUBSCRIPTION_ICONS: Record<string, { icon: string; color: string }> = {
+  trial_auto_renew: { icon: "gift", color: "#4CAF50" },
+  basic: { icon: "star-outline", color: "#2196F3" },
+  pro: { icon: "star", color: "#FF9800" },
+  business: { icon: "crown", color: "#9C27B0" },
+};
+
 
 export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const subscriptionIcon =
+    profile && SUBSCRIPTION_ICONS[profile.subscriptionPackage]
+      ? SUBSCRIPTION_ICONS[profile.subscriptionPackage]
+      : { icon: "help-circle-outline", color: "#999" };
 
-  // ❗️ DONT: No need for userId and immediate return here!
 
-  // Utility for isActive supporting both boolean or string
+
   function isAccountActive(p: UserProfile) {
     const v = p.subscription?.isActive;
     return v === true || v === "true" || v === 1;
   }
 
-  // ❗️ CHANGED: Real-time Firestore listener
+
   useEffect(() => {
     let unsubscribe: any;
     const setupListener = async () => {
@@ -111,6 +123,29 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
     setupListener();
     return () => unsubscribe && unsubscribe();
   }, []);
+
+
+
+  // ⛔️ Auto-disable subscription when expired
+  useEffect(() => {
+    if (!profile?.subscriptionEnd) return;
+
+    const now = new Date();
+    const end = new Date(profile.subscriptionEnd);
+
+    if (end < now && profile.subscription?.isActive === true) {
+      const uid = profile.uid || profile.id || auth.currentUser?.uid;
+      if (!uid) return;
+
+      updateDoc(doc(db, "users", uid), {
+        "subscription.isActive": false,
+        "subscription.status": "expired",
+        "ad.isVisible": false,
+      });
+    }
+  }, [profile]);
+
+
 
   // unchanged logic for saving locally
   const saveProfileEverywhere = async (updated: UserProfile) => {
@@ -303,7 +338,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
           </View>
         </View>
 
-        {/* Personal Information Section */}
+
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>المعلومات الشخصية</Text>
@@ -312,7 +347,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
           <InfoRow icon="phone" label="رقم الهاتف" value={profile.mobile} />
           <InfoRow icon="email" label="البريد الإلكتروني" value={profile.email} />
-          {/* <InfoRow icon="lock" label="كلمة المرور" value={profile.password} /> */}
+
 
           <View style={styles.infoRow}>
             <View style={styles.infoContent}>
@@ -341,20 +376,42 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
         {/* Subscription Section */}
         <View style={styles.sectionCard}>
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>معلومات الاشتراك</Text>
-            <MaterialCommunityIcons name="crown" size={24} color="#FF9800" />
+
+            <MaterialCommunityIcons
+              name={subscriptionIcon.icon as any}
+              size={26}
+              color={subscriptionIcon.color}
+            />
           </View>
+
 
           <View style={styles.subscriptionHeader}>
             <View style={styles.priceContainer}>
               <Text style={styles.currency}>$</Text>
               <Text style={styles.price}>{profile.subscriptionPrice}</Text>
             </View>
-            <View style={styles.packageBadge}>
-              <Text style={styles.packageText}>{profile.subscriptionPackage}</Text>
-              <MaterialCommunityIcons name="star" size={20} color="#fff" />
+
+            <View
+              style={[
+                styles.packageBadge,
+                { backgroundColor: subscriptionIcon.color },
+              ]}
+            >
+              <Text style={styles.packageText}>
+                {profile.subscriptionPackage}
+              </Text>
+
+              <MaterialCommunityIcons
+                name={subscriptionIcon.icon as any}
+                size={20}
+                color="#fff"
+              />
             </View>
+
+
           </View>
 
           <View style={styles.subscriptionDetails}>

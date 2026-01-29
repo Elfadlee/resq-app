@@ -149,6 +149,8 @@ export default function PackagesScreen({
   });
 
 
+
+
   const handleConfirm = async () => {
     Keyboard.dismiss();
 
@@ -209,23 +211,23 @@ export default function PackagesScreen({
     }
 
 
-    // ✅ (لا يمس Apple) هذا فقط للي يسجل يدوي Email/Password
- let authUser = auth.currentUser;
 
-// ✅ فقط إذا التسجيل Email/Password
-if (
-  !authUser &&
-  registrationData?.signupType === "manual" &&
-  registrationData?.email &&
-  registrationData?.password
-) {
-  const cred = await createUserWithEmailAndPassword(
-    auth,
-    registrationData.email.trim(),
-    registrationData.password
-  );
-  authUser = cred.user;
-}
+    let authUser = auth.currentUser;
+
+
+    if (
+      !authUser &&
+      registrationData?.signupType === "manual" &&
+      registrationData?.email &&
+      registrationData?.password
+    ) {
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        registrationData.email.trim(),
+        registrationData.password
+      );
+      authUser = cred.user;
+    }
 
 
     const userData = {
@@ -261,12 +263,12 @@ if (
 
 
 
-  if (!userId) {
-  Alert.alert("خطأ", "لا يوجد مستخدم مصادق عليه");
-  return;
-}
+      if (!userId) {
+        Alert.alert("خطأ", "لا يوجد مستخدم مصادق عليه");
+        return;
+      }
 
-await setDoc(doc(db, "users", userId), userData, { merge: true });
+      await setDoc(doc(db, "users", userId), userData, { merge: true });
 
 
       const cachedUser = {
@@ -299,11 +301,14 @@ await setDoc(doc(db, "users", userId), userData, { merge: true });
 
   return (
     <ScrollView
+        key={selectedPackage ?? 'packages'}
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+
+
       <View style={styles.formCard}>
         <View style={styles.header}>
           <MaterialCommunityIcons name="crown" size={40} color="#FF9800" />
@@ -509,20 +514,29 @@ await setDoc(doc(db, "users", userId), userData, { merge: true });
                 />
               )}
             </View>
-            <Text
-              style={styles.policyLink}
-              onPress={() => {
-                Alert.alert(
-                  "سياسة الخصوصية",
-                  "تقدر تشوف سياسة الخصوصية من القائمة الجانبية"
-                );
-              }}
-            >
-              سياسة الخصوصية والشروط
-            </Text>
 
+            <View style={{ flex: 1 }}>
+              <Text style={styles.policyText}>
+                أوافق على{" "}
+                <Text
+                  style={styles.policyLink}
+                  onPress={() =>
+                    Alert.alert(
+                      "سياسة الخصوصية",
+                      "يمكنك الاطلاع على سياسة الخصوصية والاشتراكات من القائمة الجانبية"
+                    )
+                  }
+                >
+                  سياسة الخصوصية والشروط
+                </Text>
+              </Text>
 
+              <Text style={styles.policyText}>
+                وأوافق على نشر رقم هاتفي للتواصل عبر واتساب
+              </Text>
+            </View>
           </TouchableOpacity>
+
 
           <View style={styles.divider} />
 
@@ -565,7 +579,11 @@ await setDoc(doc(db, "users", userId), userData, { merge: true });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  scrollContent: { flexGrow: 1, paddingBottom: 32 },
+  scrollContent: {
+    paddingBottom: 32,
+    alignItems: 'stretch',
+  },
+
   formCard: {
     margin: 16,
     borderRadius: 20,
