@@ -4,7 +4,7 @@ import { db } from "../services/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import React, { useState } from "react";
-import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import {  Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 import { auth } from "../services/firestore";
 import storage from "../services/storage-helper";
 import AppleLoginButton from "./AppleLoginButton";
@@ -125,6 +125,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
 
 
     return (
+
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 {Platform.OS === "ios" && (
@@ -278,6 +279,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, goToProfile, navi
 
 
         </View>
+
     );
 }
 
@@ -288,8 +290,8 @@ const styles = StyleSheet.create({
     content: {
         flexGrow: 1,
         padding: 20,
-        paddingTop: 60,
-        paddingBottom: 80,
+        paddingTop: 20,
+        paddingBottom: 90,
     },
 
 

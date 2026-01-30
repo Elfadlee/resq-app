@@ -301,7 +301,7 @@ export default function PackagesScreen({
 
   return (
     <ScrollView
-        key={selectedPackage ?? 'packages'}
+        // key={selectedPackage ?? 'packages'}
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
