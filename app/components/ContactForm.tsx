@@ -83,28 +83,31 @@ const ContactFormCustomUI: React.FC = () => {
     setLoading(true);
 
     try {
-      const subject = encodeURIComponent(formData.title);
-      const body = encodeURIComponent(
-        `العنوان: ${formData.title}\n\n` +
-        `الرسالة:\n${formData.message}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `معلومات المرسل:\n` +
-        `البريد الإلكتروني: ${formData.email}\n` +
-        `${formData.mobile ? `رقم الجوال: ${formData.mobile}\n` : ''}` +
-        `━━━━━━━━━━━━━━━━━━━━━━`
+     const response = await fetch(
+        'https://us-central1-rezq-app.cloudfunctions.net/sendContactEmail',
+
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: formData.title,
+            message: formData.message,
+            email: formData.email,
+            mobile: formData.mobile,
+          }),
+        }
       );
 
-      const yourEmail = 'your.email@example.com';
-      const mailtoUrl = `mailto:${yourEmail}?subject=${subject}&body=${body}`;
-
-      const supported = await Linking.canOpenURL(mailtoUrl);
-
-      if (supported) {
-        await Linking.openURL(mailtoUrl);
-        setFormData({ title: '', message: '', email: '', mobile: '' });
-        setSent(true);
-        setTimeout(() => setSent(false), 3000);
+      if (!response.ok) {
+        throw new Error('فشل إرسال الرسالة');
       }
+
+      setFormData({ title: '', message: '', email: '', mobile: '' });
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
+
     } catch (e) {
       Alert.alert('خطأ', 'حدث خطأ أثناء إرسال الرسالة.');
     } finally {
@@ -258,13 +261,13 @@ const ContactFormCustomUI: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-scrollContent: {
-  padding: 20,
-  paddingBottom: 60,
-},
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 60,
+  },
 
 
-  /* ✅ التعديل الوحيد */
+
   header: {
     marginBottom: 10,
     alignItems: 'center',
@@ -276,20 +279,20 @@ scrollContent: {
     textAlign: 'center',
     marginBottom: 16,
     marginTop: 10,
-  
-    
+
+
   },
   headerSubtitle: {
     fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-   
+    fontFamily: 'Almarai-Bold'
   },
 
   successText: { color: '#22C55E', marginBottom: 12, textAlign: 'right' },
   formCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16 },
   inputWrapper: { marginBottom: 16 },
-  inputLabel: { fontSize: 12, color: '#0B3C5D', textAlign: 'right', marginBottom: 14, },
+  inputLabel: { fontSize: 12, color: '#0B3C5D', textAlign: 'right', marginBottom: 14, fontFamily: 'Almarai-Bold' },
   inputContainer: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   focused: { borderColor: '#FF9800' },
   input: { padding: 12, fontSize: 14, textAlign: 'right', fontFamily: 'Almarai' },

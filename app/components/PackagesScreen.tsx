@@ -4,7 +4,7 @@ import { serverTimestamp, doc, setDoc, increment, addDoc, collection } from "fir
 import * as React from 'react';
 import { useState } from 'react';
 import {
-  Alert,
+
   Keyboard,
   Platform,
   ScrollView,
@@ -18,6 +18,10 @@ import { auth } from '../services/firestore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { buy } from "../services/iap";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useModal } from '../components/ModalProvider';
+import * as Notifications from "expo-notifications";
+
+
 
 
 
@@ -147,34 +151,62 @@ export default function PackagesScreen({
     if (pkg.id === 'trial_auto_renew' && hasPreviousSubscription) return false;
     return true;
   });
+  const { showModal } = useModal();
 
 
+
+  const showError = (msg: string) => {
+    showModal({
+      title: "خطأ",
+      message: msg,
+      primaryText: "موافق",
+    });
+  };
+
+  const showInfo = (title: string, msg: string) => {
+    showModal({
+      title,
+      message: msg,
+      primaryText: "موافق",
+    });
+  };
 
 
   const handleConfirm = async () => {
     Keyboard.dismiss();
 
+    let expoPushToken: string | null = null;
+
+    try {
+      expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+    } catch (e) {
+      console.log("⚠️ Could not get push token", e);
+    }
+
+
+
     if (!selectedPackage) {
-      Alert.alert('خطأ', 'يرجى اختيار باقة الاشتراك');
+      showError('يرجى اختيار باقة الاشتراك');
       return;
     }
 
     if (!acceptPolicy) {
-      Alert.alert('خطأ', 'يرجى الموافقة على سياسة الخصوصية');
+      showError('يرجى الموافقة على سياسة الخصوصية');
       return;
     }
 
     if (selectedPackage === 'trial_auto_renew' && hasPreviousSubscription) {
-      Alert.alert(
-        'غير متاح',
-        'لا يمكن تفعيل الباقة التجريبية أكثر من مرة'
-      );
+      showInfo('غير متاح', 'لا يمكن تفعيل الباقة التجريبية أكثر من مرة');
       return;
     }
 
 
 
     const pkg = SUBSCRIPTION_PACKAGES.find(p => p.id === selectedPackage);
+    if (!pkg) {
+      showError('الباقة غير موجودة، حاول مرة أخرى');
+      return;
+    }
 
     const price =
       selectedPackage === 'trial_auto_renew'
@@ -202,7 +234,7 @@ export default function PackagesScreen({
           : undefined;
 
       if (!productId) {
-        Alert.alert('خطأ', 'نوع الاشتراك غير متوفر لهذه الباقة');
+        showError('نوع الاشتراك غير متوفر لهذه الباقة');
         return;
       }
 
@@ -232,6 +264,9 @@ export default function PackagesScreen({
 
     const userData = {
       ...registrationData,
+
+      expoPushToken: expoPushToken || null,
+
       subscription: {
         package: pkg?.id || "basic",
         packageName: pkg?.nameAr || "أساسي",
@@ -264,10 +299,9 @@ export default function PackagesScreen({
 
 
       if (!userId) {
-        Alert.alert("خطأ", "لا يوجد مستخدم مصادق عليه");
+        showError("لا يوجد مستخدم مصادق عليه");
         return;
       }
-
       await setDoc(doc(db, "users", userId), userData, { merge: true });
 
 
@@ -291,17 +325,17 @@ export default function PackagesScreen({
 
       onConfirm(cachedUser);
 
-      Alert.alert("👍 تم التسجيل", "تم حفظ بياناتك بنجاح");
+      showInfo("تم التسجيل ✅", "تم حفظ بياناتك بنجاح");
 
     } catch (error) {
       console.log("Firestore error:", error);
-      Alert.alert("خطأ", "تعذر حفظ البيانات — حاول مرة أخرى");
+      showError("تعذر حفظ البيانات — حاول مرة أخرى");
     }
   };
 
   return (
     <ScrollView
-        // key={selectedPackage ?? 'packages'}
+      // key={selectedPackage ?? 'packages'}
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -520,12 +554,8 @@ export default function PackagesScreen({
                 أوافق على{" "}
                 <Text
                   style={styles.policyLink}
-                  onPress={() =>
-                    Alert.alert(
-                      "سياسة الخصوصية",
-                      "يمكنك الاطلاع على سياسة الخصوصية والاشتراكات من القائمة الجانبية"
-                    )
-                  }
+                  onPress={() => showInfo("سياسة الخصوصية", "يمكنك الاطلاع على سياسة الخصوصية والاشتراكات من القائمة الجانبية")}
+
                 >
                   سياسة الخصوصية والشروط
                 </Text>

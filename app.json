@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rizq-app",
     "slug": "rizq-app",
-     "updates": {
+    "updates": {
       "enabled": false
     },
     "version": "1.0.0",
@@ -55,8 +55,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7feb2564-7cdd-4db2-a10e-9d915692e80f"
+        "projectId": "ad45cc9e-e8ea-43f4-8227-3f756efd0fc0"
       }
-    }
+    },
+    "owner": "najeh1978"
   }
 }

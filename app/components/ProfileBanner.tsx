@@ -1,23 +1,20 @@
-
-
 import * as React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  Alert,
-  ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Platform, ActivityIndicator,
 } from 'react-native';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import storage from '../services/storage-helper';
-import { deleteDoc, doc, onSnapshot } from "firebase/firestore";        // ❗️ CHANGED: Added onSnapshot here
+
+import * as RNIap from "react-native-iap";
+
+import { deleteDoc, doc, onSnapshot, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "../services/firestore";
 import { signOut } from "firebase/auth";
-import { updateDoc } from "firebase/firestore";
+import { useModal } from '../components/ModalProvider';
+
 
 
 
@@ -31,7 +28,6 @@ type UserProfile = {
   mobile: string;
   email: string;
   description: string;
-  password: string;
   subscriptionPackage: string;
   subscriptionDuration: 'monthly' | 'quarterly';
   subscriptionPrice: number;
@@ -67,12 +63,28 @@ const SUBSCRIPTION_ICONS: Record<string, { icon: string; color: string }> = {
 export default function ProfileBanner({ navigation }: ProfileBannerProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const subscriptionIcon =
     profile && SUBSCRIPTION_ICONS[profile.subscriptionPackage]
       ? SUBSCRIPTION_ICONS[profile.subscriptionPackage]
       : { icon: "help-circle-outline", color: "#999" };
+  const { showModal } = useModal();
 
+
+  const showError = (msg: string) => {
+    showModal({
+      title: 'تنبيه',
+      message: msg,
+      primaryText: 'موافق',
+    });
+  };
+
+  const showSuccess = (msg: string) => {
+    showModal({
+      title: 'تم بنجاح',
+      message: msg,
+      primaryText: 'موافق',
+    });
+  };
 
 
   function isAccountActive(p: UserProfile) {
@@ -112,7 +124,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             subscriptionEnd: userData.subscription?.endAt || '',
           };
           setProfile(mapped);
-          storage.setObject('currentUser', mapped); // optional: update cache
+          storage.setObject('currentUser', mapped); 
         }
         setLoading(false);
       }, (error) => {
@@ -126,7 +138,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
 
 
-  // ⛔️ Auto-disable subscription when expired
+
   useEffect(() => {
     if (!profile?.subscriptionEnd) return;
 
@@ -147,7 +159,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
 
 
-  // unchanged logic for saving locally
+
   const saveProfileEverywhere = async (updated: UserProfile) => {
     await storage.setObject('currentUser', updated);
     const allUsers = (await storage.getObject<UserProfile[]>('allUsers')) || [];
@@ -175,13 +187,17 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
 
   const handleEditProfile = () => {
     if (!profile) return;
-    if (!navigation?.navigate) return Alert.alert('خطأ', 'لا يمكن فتح شاشة ا��تعديل');
+    if (!navigation?.navigate) {
+      showError('لا يمكن فتح شاشة التعديل');
+      return;
+    }
+
 
     navigation.navigate('EditProfile', {
       profile,
       onSave: async (updated: UserProfile) => {
         await saveProfileEverywhere(updated);
-        // ❗️ CHANGED: No need to call loadProfile now, Firestore will update profile automatically
+
       },
     });
   };
@@ -195,78 +211,131 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
       onConfirm: async (pkg: any) => {
         const updated = { ...profile, ...pkg };
         await saveProfileEverywhere(updated);
-        Alert.alert('نجاح', 'تم ترقية الباقة بنجاح');
+        showSuccess('تم ترقية الباقة بنجاح');
+
       },
       onBack: () => navigation.goBack(),
     });
   };
 
   const handleRenewSubscription = () => {
-    Alert.alert('تجديد الاشتراك', 'هل تريد تجديد اشتراكك؟', [
-      { text: 'إلغاء', style: 'cancel' },
-      {
-        text: 'تجديد',
-        onPress: () => {
-          navigation?.navigate?.('PackagesScreen', {
-            mode: 'renew',
-            currentProfile: profile,
-            registrationData: profile,
-            onConfirm: async (pkg: any) => {
-              if (!profile) return;
-              const updated = { ...profile, ...pkg };
-              await saveProfileEverywhere(updated);
-              Alert.alert('نجاح', 'تم تجديد الاشتراك بنجاح');
-            },
-            onBack: () => navigation.goBack(),
-          });
-        },
+    showModal({
+      title: 'تجديد الاشتراك',
+      message: 'هل تريد تجديد اشتراكك؟',
+      primaryText: 'تجديد',
+      secondaryText: 'إلغاء',
+      onPrimary: () => {
+        navigation?.navigate?.('PackagesScreen', {
+          mode: 'renew',
+          currentProfile: profile,
+          registrationData: profile,
+          onConfirm: async (pkg: any) => {
+            if (!profile) return;
+            const updated = { ...profile, ...pkg };
+            await saveProfileEverywhere(updated);
+            showSuccess('تم تجديد الاشتراك بنجاح');
+          },
+          onBack: () => navigation.goBack(),
+        });
       },
-    ]);
+    });
   };
+
+
+
 
   const confirmDeleteAccount = async () => {
     try {
       const uid = profile?.uid || profile?.id || auth.currentUser?.uid || null;
       if (!uid) {
-        Alert.alert("خطأ", "لم يتم العثور على معرف المستخدم (UID)");
+        showError("لم يتم العثور على المستخدم");
         return;
       }
+
       const userRef = doc(db, "users", uid);
       try {
         await deleteDoc(userRef);
       } catch (err) {
-        Alert.alert("خطأ", "فشل حذف الحساب من قاعدة البيانات");
+        showError("فشل حذف الحساب من قاعدة البيانات");
+
         return;
       }
       await storage.removeItem("currentUser");
       await storage.removeItem("allUsers");
-      Alert.alert("تم حذف الحساب", "تم حذف حسابك بنجاح", [
-        {
-          text: "حسناً",
-          onPress: () => {
-            setProfile?.(null);
-            navigation?.reset?.({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
+      showModal({
+        title: 'تم حذف الحساب',
+        message: 'تم حذف حسابك بنجاح',
+        primaryText: 'حسناً',
+        onPrimary: () => {
+          setProfile?.(null);
+          navigation?.reset?.({
+            index: 0,
+            routes: [{ name: "Login" }],
+          });
         },
-      ]);
+      });
+
     } catch (e) {
-      Alert.alert("خطأ", "حدث خطأ غير متوقع أثناء الحذف");
+      showError("حدث خطأ غير متوقع أثناء الحذف");
     }
   };
 
+const handleRestorePurchases = async () => {
+  try {
+    await RNIap.initConnection();
+
+    const purchases = await RNIap.getAvailablePurchases();
+
+    if (!purchases || purchases.length === 0) {
+      showError("لا يوجد اشتراك سابق مرتبط بحساب Apple هذا");
+      return;
+    }
+
+    const latestPurchase = purchases[purchases.length - 1];
+
+    const uid =
+      profile?.uid ||
+      profile?.id ||
+      auth.currentUser?.uid;
+
+    if (!uid) {
+      showError("لم يتم العثور على المستخدم");
+      return;
+    }
+
+    await updateDoc(doc(db, "users", uid), {
+      "subscription.isActive": true,
+      "subscription.productId": latestPurchase.productId,
+      "subscription.restoredAt": serverTimestamp(),
+      "ad.isVisible": false,
+      "ad.status": "pending",
+    });
+
+    showModal({
+      title: "تم بنجاح ✅",
+      message: "تمت إعادة تفعيل الاشتراك، الإعلان قيد المراجعة",
+      primaryText: "حسناً",
+    });
+
+  } catch (error) {
+    console.log("Restore error:", error);
+    showError("حدث خطأ أثناء استرجاع الاشتراك");
+  } finally {
+    await RNIap.endConnection();
+  }
+};
+
+
+
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'حذف الحساب',
-      'هل أنت متأكد من حذف حسابك؟',
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'حذف', style: 'destructive', onPress: confirmDeleteAccount },
-      ],
-      { cancelable: true },
-    );
+    showModal({
+      title: 'حذف الحساب',
+      message: 'هل أنت متأكد من حذف حسابك؟',
+      primaryText: 'حذف',
+      secondaryText: 'إلغاء',
+      onPrimary: confirmDeleteAccount,
+    });
+
   };
 
   const handleLogout = async () => {
@@ -316,8 +385,10 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
     );
 
 
-  const daysRemaining = calculateDaysRemaining(profile.subscriptionEnd);
-  const isExpiringSoon = daysRemaining <= 7;
+  const daysRemaining = profile.subscriptionEnd
+    ? calculateDaysRemaining(profile.subscriptionEnd)
+    : 0;
+
 
   return (
     <View style={styles.container}>
@@ -349,22 +420,9 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
           <InfoRow icon="email" label="البريد الإلكتروني" value={profile.email} />
 
 
-          <View style={styles.infoRow}>
-            <View style={styles.infoContent}>
-              <Text style={styles.label}>كلمة المرور</Text>
-              <Text style={styles.value}>
-                {showPassword ? profile.password : '••••••••'}
-              </Text>
-            </View>
 
-            <TouchableOpacity onPress={() => setShowPassword(v => !v)}>
-              <MaterialCommunityIcons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={22}
-                color="#faaf3f"
-              />
-            </TouchableOpacity>
-          </View>
+
+
 
           <InfoRow icon="text" label="الوصف" value={profile.description} />
 
@@ -446,7 +504,7 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
                   {profile?.ad?.isVisible === true &&
                     profile?.ad?.status === 'approved'
                     ? 'الاشتراك فعال'
-                    : 'تم قبول الدفع، والإعلان قيد المراجعة من قبل الإدارة'}
+                    : 'تم تفعيل الاشتراك، الإعلان قيد المراجعة من قبل الإدارة'}
                 </Text>
 
 
@@ -490,6 +548,30 @@ export default function ProfileBanner({ navigation }: ProfileBannerProps) {
             <Text style={styles.actionButtonText}>تسجيل الخروج</Text>
             <MaterialCommunityIcons name="logout" size={22} color="#FF9800" />
           </TouchableOpacity>
+
+          {!profile?.subscription?.isActive && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleRestorePurchases}
+            >
+              <MaterialCommunityIcons
+                name="chevron-left"
+                size={22}
+                color="#CBD5E0"
+              />
+              <Text style={styles.actionButtonText}>
+                إعادة الاشتراك
+              </Text>
+              <MaterialCommunityIcons
+                name="restore"
+                size={22}
+                color="#4CAF50"
+              />
+            </TouchableOpacity>
+          )}
+
+
+
           <TouchableOpacity
             style={[styles.actionButton, styles.dangerButton]}
             onPress={handleDeleteAccount}

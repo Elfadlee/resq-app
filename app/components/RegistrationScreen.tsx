@@ -7,7 +7,6 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Keyboard,
   Modal,
@@ -24,6 +23,8 @@ import {
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { TouchableWithoutFeedback } from 'react-native';
 import { db } from '../services/firestore';
+import { useModal } from '../components/ModalProvider';
+
 
 type RegistrationScreenProps = {
   initialData?: any;
@@ -41,6 +42,7 @@ const convertArabicToEnglish = (text: string): string => {
   });
   return converted;
 };
+
 
 
 const isEnglishPassword = (text: string): boolean => {
@@ -81,25 +83,24 @@ export default function RegistrationScreen({
   const [jobsFromDb, setJobsFromDb] = useState<string[]>([]);
   const [areasFromDb, setAreasFromDb] = useState<string[]>([]);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
-  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  // const [duplicateError] = useState<string | null>(null);
   const [duplicateMobile, setDuplicateMobile] = useState<string | null>(null);
   const [duplicateEmail, setDuplicateEmail] = useState<string | null>(null);
   const [passwordLangError, setPasswordLangError] = useState<string | null>(null);
   const [mobileLangError, setMobileLangError] = useState<string | null>(null);
   const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
-  const duplicateCheckTimeout = useRef<NodeJS.Timeout | number | null>(null); 
-
+  const { showModal } = useModal();
 
   const handleDescriptionChange = (text: string) => {
-  const words = text.trim().split(/\s+/).filter(Boolean);
+    const words = text.trim().split(/\s+/).filter(Boolean);
 
-  // إذا وصل 10 كلمات، لا نسمح بأي زيادة
-  if (words.length > 10) {
-    return; // نوقف هنا، ما نحدّث state
-  }
 
-  setDescription(text);
-};
+    if (words.length > 10) {
+      return;
+    }
+
+    setDescription(text);
+  };
 
 
 
@@ -243,57 +244,65 @@ export default function RegistrationScreen({
     }
   };
 
+  const showError = (msg: string) => {
+    showModal({
+      title: 'خطأ',
+      message: msg,
+      primaryText: 'موافق',
+    });
+  };
 
   const handleNext = async () => {
     Keyboard.dismiss();
     if (duplicateMobile) {
-      Alert.alert('خطأ', 'رقم الجوال مستخدم مسبقاً');
+      showError('رقم الجوال مستخدم مسبقاً');
       return;
     }
 
+
     if (duplicateEmail) {
-      Alert.alert('خطأ', 'البريد الإلكتروني مستخدم مسبقاً');
+      showError('البريد الإلكتروني مستخدم مسبقاً');
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert('خطأ', 'يرجى إدخال الاسم');
+      showError('يرجى إدخال الاسم');
       return;
     }
     if (!jobTitle) {
-      Alert.alert('خطأ', 'يرجى اختيار المهنة');
+      showError('يرجى اختيار المهنة');
       return;
     }
     if (!area) {
-      Alert.alert('خطأ', 'يرجى اختيار المنطقة');
+      showError('يرجى اختيار المنطقة');
       return;
     }
     if (!isEnglishNumbers(mobile) || mobileLangError) {
-      Alert.alert('خطأ', 'يرجى إدخال رقم الجوال بالأرقام الإنجليزية فقط');
+      showError('يرجى إدخال رقم الجوال بالأرقام الإنجليزية فقط');
       return;
     }
     if (!mobile.trim() || mobile.length < 10) {
-      Alert.alert('خطأ', 'يرجى إدخال رقم جوال صحيح (10 أرقام)');
+      showError('يرجى إدخال رقم جوال صحيح (10 أرقام)');
       return;
     }
     if (!isEnglishPassword(password) || passwordLangError) {
-      Alert.alert('خطأ', 'يرجى إدخال كلمة المرور بالحروف والأرقام الإنجليزية فقط');
+      showError('يرجى إدخال كلمة المرور بالحروف والأرقام الإنجليزية فقط');
       return;
     }
     if (!password.trim() || password.length < 8) {
-      Alert.alert('خطأ', 'يرجى إدخال كلمة مرور لا تقل عن 8 أحرف');
+      showError('يرجى إدخال كلمة مرور لا تقل عن 8 أحرف');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('خطأ', 'كلمة المرور وتأكيد كلمة المرور غير متطابقتين');
+      showError('كلمة المرور وتأكيد كلمة المرور غير متطابقتين');
       return;
     }
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('خطأ', 'يرجى إدخال بريد إلكتروني صحيح');
+      showError('يرجى إدخال بريد إلكتروني صحيح');
       return;
     }
-    if (wordCount > 120) {
-      Alert.alert('خطأ', `الوصف يحتوي على ${wordCount} كلمة.  الحد الأقصى 120 كلمة`);
+    if (wordCount > 10) {
+      showError('الحد الأقصى للوصف 10 كلمات');
       return;
     }
 
@@ -339,22 +348,7 @@ export default function RegistrationScreen({
               <Text style={{ color: '#FF9800', fontSize: 15 }}>جاري التحـقق من البيانات ...</Text>
             </View>
           )}
-          {duplicateError && (
-            <View
-              style={{
-                backgroundColor: '#fff5f2',
-                borderWidth: 1,
-                borderColor: '#ffc1a1',
-                padding: 8,
-                marginVertical: 8,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ color: '#e53935', textAlign: 'center', fontSize: 16 }}>
-                {duplicateError}
-              </Text>
-            </View>
-          )}
+   
 
           <View style={styles.form}>
             {/* الاسم الكامل */}

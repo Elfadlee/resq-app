@@ -5,7 +5,7 @@ import { updatePassword } from "firebase/auth";
 import { collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 import {
-  Alert,
+
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 import { auth, db } from "../services/firestore";
 import storage from '../services/storage-helper';
+import { useModal } from '../components/ModalProvider';
+
 
 
 
@@ -59,6 +61,26 @@ export default function ProfileEdit({ navigation, route }: any) {
   const [jobsFromDb, setJobsFromDb] = useState<string[]>([]);
   const [areasFromDb, setAreasFromDb] = useState<string[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
+  const { showModal } = useModal();
+
+  const showError = (msg: string) => {
+    showModal({
+      title: 'خطأ',
+      message: msg,
+      primaryText: 'موافق',
+    });
+  };
+
+  const showSuccess = (title: string, msg: string, onClose?: () => void) => {
+    showModal({
+      title,
+      message: msg,
+      primaryText: 'حسناً',
+      onPrimary: onClose,
+    });
+  };
+
+
   useEffect(() => {
     const loadLookups = async () => {
       try {
@@ -86,7 +108,7 @@ export default function ProfileEdit({ navigation, route }: any) {
           areasSnap.docs.map(d => d.data().name).filter(Boolean)
         );
       } catch (e) {
-        Alert.alert('خطأ', 'فشل تحميل المهن أو المناطق');
+        showError('فشل تحميل المهن أو المناطق');
       } finally {
         setLoadingLookups(false);
       }
@@ -127,14 +149,13 @@ export default function ProfileEdit({ navigation, route }: any) {
       area !== profile.area ||
       description.trim() !== profile.description;
 
-    if (!name.trim()) return Alert.alert("خطأ", "الرجاء إدخال الاسم");
-    if (!jobTitle) return Alert.alert("خطأ", "الرجاء اختيار المهنة");
-    if (!area) return Alert.alert("خطأ", "الرجاء اختيار المنطقة");
-    if (!mobile.trim() || mobile.trim().length < 10) return Alert.alert("خطأ", "الرجاء إدخال رقم هاتف صحيح");
-    if (wordCount > 120) return Alert.alert("خطأ", `الوصف يحتوي على ${wordCount} كلمة. الحد الأقصى 120 كلمة`);
-
+    if (!name.trim()) return showError("الرجاء إدخال الاسم");
+    if (!jobTitle) return showError("الرجاء اختيار المهنة");
+    if (!area) return showError("الرجاء اختيار المنطقة");
+    if (!mobile.trim() || mobile.trim().length < 10) return showError("الرجاء إدخال رقم هاتف صحيح");
+    if (wordCount > 120) return showError(`الوصف يحتوي على ${wordCount} كلمة. الحد الأقصى 120 كلمة`);
     const myId = auth.currentUser?.uid;
-    if (!myId) return Alert.alert("خطأ", "انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى");
+    if (!myId) return showError("انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى");
 
     const formattedMobile = mobile.trim().startsWith("+964")
       ? mobile.trim()
@@ -146,7 +167,7 @@ export default function ProfileEdit({ navigation, route }: any) {
       // 2) check duplicate mobile
       const taken = await isMobileTaken(formattedMobile, myId);
       if (taken) {
-        Alert.alert("خطأ", "رقم الهاتف مستخدم من قبل");
+        showError("رقم الهاتف مستخدم من قبل");
         return;
       }
 
@@ -154,15 +175,14 @@ export default function ProfileEdit({ navigation, route }: any) {
       if (password.trim()) {
         const user = auth.currentUser;
         if (!user) {
-          Alert.alert("خطأ", "انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى");
+          showError("انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى");
           return;
         }
 
         try {
           await updatePassword(user, password.trim());
         } catch (err) {
-          Alert.alert(
-            "خطأ",
+          showError(
             "فشل تغيير كلمة المرور. غالباً تحتاج تسوي تسجيل خروج ثم دخول وتعيد المحاولة."
           );
           return;
@@ -191,7 +211,7 @@ export default function ProfileEdit({ navigation, route }: any) {
         description: updatedProfile.description,
 
         ...(requiresReview && {
-            "subscription.isActive": true,  
+          "subscription.isActive": true,
           "ad.isVisible": false,
           "ad.status": "pending",
         }),
@@ -206,19 +226,23 @@ export default function ProfileEdit({ navigation, route }: any) {
 
       // 7) success message
       if (requiresReview) {
-        Alert.alert(
+        showSuccess(
           "تم إرسال المعلومات",
           "تم إرسال معلوماتك للمراجعة وسيتم تفعيل الحساب خلال ٤٨ ساعة.",
-          [{ text: "حسناً", onPress: () => navigation.goBack() }]
+          () => navigation.goBack()
         );
       } else {
-        Alert.alert("تم الحفظ", "تم حفظ التعديلات بنجاح.", [
-          { text: "حسناً", onPress: () => navigation.goBack() },
-        ]);
+        showSuccess(
+          "تم الحفظ",
+          "تم حفظ التعديلات بنجاح.",
+          () => navigation.goBack()
+        );
       }
 
+
     } catch (e) {
-      Alert.alert("خطأ", "فشل تحديث المعلومات.");
+      showError("فشل تحديث المعلومات.");
+
     } finally {
       setSaving(false);
     }
@@ -229,273 +253,273 @@ export default function ProfileEdit({ navigation, route }: any) {
 
 
   return (
-  
-  
-    
-          <View style={styles.container}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={{ flex: 1 }}
-            >
-              <View style={styles.header}>
-                <View style={{ width: 40 }} />
-                <Text style={styles.headerTitle}>تعديل المعلومات</Text>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <MaterialCommunityIcons name="arrow-right" size={24} color="#FF9800" />
-                </TouchableOpacity>
+
+
+
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.header}>
+          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitle}>تعديل المعلومات</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-right" size={24} color="#FF9800" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.form}>
+
+            {/* Name */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>الاسم *</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="أدخل الاسم"
+                  textAlign="right"
+                />
+                <MaterialCommunityIcons name="account" size={20} color="#FF9800" />
+              </View>
+            </View>
+
+            {/* Job Title */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>المهنة *</Text>
+              <TouchableOpacity
+                style={styles.inputWrapper}
+                onPress={() => {
+                  if (loadingLookups) return;
+                  setJobMenuVisible(true);
+                }}
+
+              >
+                <Text style={[styles.dropdownText, !jobTitle && styles.placeholder]}>
+                  {loadingLookups ? 'جاري التحميل...' : jobTitle || 'اختر المهنة'}
+
+                </Text>
+                <MaterialCommunityIcons name="briefcase" size={20} color="#FF9800" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Area */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>المنطقة *</Text>
+              <TouchableOpacity
+                style={styles.inputWrapper}
+                onPress={() => {
+                  if (loadingLookups) return;
+                  setAreaMenuVisible(true);
+                }}
+
+              >
+                <Text style={[styles.dropdownText, !area && styles.placeholder]}>
+                  {loadingLookups ? 'جاري التحميل...' : area || 'اختر المنطقة'}
+                </Text>
+                <MaterialCommunityIcons name="map-marker" size={20} color="#FF9800" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Mobile */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>رقم الهاتف *</Text>
+              <View style={styles.inputWrapper}>
+                <View style={styles.mobileContainer}>
+                  <TextInput
+                    style={styles.mobileInput}
+                    value={mobile}
+                    onChangeText={setMobile}
+                    placeholder="770 123 4567"
+                    keyboardType="phone-pad"
+                    textAlign="right"
+                    maxLength={10}
+                  />
+                  <Text style={styles.mobilePrefix}>964+</Text>
+                </View>
+                <MaterialCommunityIcons name="phone" size={20} color="#FF9800" />
+              </View>
+              {/* Mobile duplicate warning (placed BELOW inputWrapper) */}
+              {duplicateMobile && (
+                <Text style={{ color: '#e53935', fontSize: 13, marginTop: 2, textAlign: 'right' }}>
+                  {duplicateMobile}{'\n'}رقم الهاتف مستخدم سابقاً، يرجى استخدام رقم آخر أو الدخول بحسابك.
+                </Text>
+              )}
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>البريد الإلكتروني *</Text>
+
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { backgroundColor: '#f3f3f3', color: '#999' }
+                  ]}
+                  value={email}
+                  placeholder="example@email.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  textAlign="right"
+                  editable={false} // 🔒 ممنوع التعديل
+                />
+                <MaterialCommunityIcons name="email" size={20} color="#FF9800" />
               </View>
 
-              <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                <View style={styles.form}>
-
-                  {/* Name */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>الاسم *</Text>
-                    <View style={styles.inputWrapper}>
-                      <TextInput
-                        style={styles.input}
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="أدخل الاسم"
-                        textAlign="right"
-                      />
-                      <MaterialCommunityIcons name="account" size={20} color="#FF9800" />
-                    </View>
-                  </View>
-
-                  {/* Job Title */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>المهنة *</Text>
-                    <TouchableOpacity
-                      style={styles.inputWrapper}
-                      onPress={() => {
-                        if (loadingLookups) return;
-                        setJobMenuVisible(true);
-                      }}
-
-                    >
-                      <Text style={[styles.dropdownText, !jobTitle && styles.placeholder]}>
-                        {loadingLookups ? 'جاري التحميل...' : jobTitle || 'اختر المهنة'}
-
-                      </Text>
-                      <MaterialCommunityIcons name="briefcase" size={20} color="#FF9800" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Area */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>المنطقة *</Text>
-                    <TouchableOpacity
-                      style={styles.inputWrapper}
-                      onPress={() => {
-                        if (loadingLookups) return;
-                        setAreaMenuVisible(true);
-                      }}
-
-                    >
-                      <Text style={[styles.dropdownText, !area && styles.placeholder]}>
-                        {loadingLookups ? 'جاري التحميل...' : area || 'اختر المنطقة'}
-                      </Text>
-                      <MaterialCommunityIcons name="map-marker" size={20} color="#FF9800" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Mobile */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>رقم الهاتف *</Text>
-                    <View style={styles.inputWrapper}>
-                      <View style={styles.mobileContainer}>
-                        <TextInput
-                          style={styles.mobileInput}
-                          value={mobile}
-                          onChangeText={setMobile}
-                          placeholder="770 123 4567"
-                          keyboardType="phone-pad"
-                          textAlign="right"
-                          maxLength={10}
-                        />
-                        <Text style={styles.mobilePrefix}>964+</Text>
-                      </View>
-                      <MaterialCommunityIcons name="phone" size={20} color="#FF9800" />
-                    </View>
-                    {/* Mobile duplicate warning (placed BELOW inputWrapper) */}
-                    {duplicateMobile && (
-                      <Text style={{ color: '#e53935', fontSize: 13, marginTop: 2, textAlign: 'right' }}>
-                        {duplicateMobile}{'\n'}رقم الهاتف مستخدم سابقاً، يرجى استخدام رقم آخر أو الدخول بحسابك.
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Email */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>البريد الإلكتروني *</Text>
-
-                    <View style={styles.inputWrapper}>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          { backgroundColor: '#f3f3f3', color: '#999' }
-                        ]}
-                        value={email}
-                        placeholder="example@email.com"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        textAlign="right"
-                        editable={false} // 🔒 ممنوع التعديل
-                      />
-                      <MaterialCommunityIcons name="email" size={20} color="#FF9800" />
-                    </View>
-
-                    {/* رسالة ثابتة وواضحة */}
-                    <Text style={{ color: '#e53935', fontSize: 13, marginTop: 2, textAlign: 'right' }}>
-                      لا يمكن تغيير البريد الإلكتروني. في حال الحاجة للتعديل يرجى التواصل مع الدعم.
-                    </Text>
-                  </View>
+              {/* رسالة ثابتة وواضحة */}
+              <Text style={{ color: '#e53935', fontSize: 13, marginTop: 2, textAlign: 'right' }}>
+                لا يمكن تغيير البريد الإلكتروني. في حال الحاجة للتعديل يرجى التواصل مع الدعم.
+              </Text>
+            </View>
 
 
-                  {/* Password */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>كلمة المرور (اختياري)</Text>
-                    <View style={styles.inputWrapper}>
-                      <View style={styles.passwordContainer}>
-                        <TouchableOpacity
-                          onPress={() => setShowPassword(!showPassword)}
-                          style={styles.eyeIcon}
-                        >
-                          <MaterialCommunityIcons
-                            name={showPassword ? 'eye-off' : 'eye'}
-                            size={20}
-                            color="#666"
-                          />
-                        </TouchableOpacity>
-                        <TextInput
-                          style={styles.passwordInput}
-                          value={password}
-                          onChangeText={setPassword}
-                          placeholder="اترك فارغاً للإبقاء على القديمة"
-                          secureTextEntry={!showPassword}
-                          textAlign="right"
-                        />
-                      </View>
-                      <MaterialCommunityIcons name="lock" size={20} color="#FF9800" />
-                    </View>
-                  </View>
-
-                  {/* Description */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>الوصف</Text>
-                    <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                      <TextInput
-                        style={[styles.input, styles.textArea]}
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="أدخل وصف مختصر"
-                        multiline
-                        numberOfLines={4}
-                        textAlign="right"
-                        textAlignVertical="top"
-                      />
-                      <MaterialCommunityIcons
-                        name="text"
-                        size={20}
-                        color="#FF9800"
-                        style={styles.textAreaIcon}
-                      />
-                    </View>
-                    <Text style={[styles.wordCount, { color: wordCount > 120 ? '#f44336' : '#888' }]}>
-                      {wordCount} / 120 كلمة
-                    </Text>
-                  </View>
-
-                  {/* Save Button */}
+            {/* Password */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>كلمة المرور (اختياري)</Text>
+              <View style={styles.inputWrapper}>
+                <View style={styles.passwordContainer}>
                   <TouchableOpacity
-                    style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                    onPress={handleSave}
-                    disabled={saving}
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
                   >
-
-                    {saving ? (
-                      <Text style={styles.saveButtonText}>جاري الحفظ...</Text>
-                    ) : (
-                      <>
-                        <Text style={styles.saveButtonText}>حفظ التغييرات</Text>
-                        <MaterialCommunityIcons name="content-save" size={20} color="#fff" />
-                      </>
-                    )}
+                    <MaterialCommunityIcons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color="#666"
+                    />
                   </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.cancelButtonText}>إلغاء</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </KeyboardAvoidingView>
-
-            {/* Job Modal */}
-            <Modal visible={jobMenuVisible} transparent animationType="slide">
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setJobMenuVisible(false)}
-              >
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHandle} />
-                  <Text style={styles.modalTitle}>اختر المهنة</Text>
-                  <FlatList
-                    data={jobsFromDb}
-                    keyExtractor={(item) => item}
-                    renderItem={({ item }: { item: string }) => (
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                          setJobTitle(item);
-                          setJobMenuVisible(false);
-                        }}
-                      >
-                        <Text style={styles.menuItemText}>{item}</Text>
-                        {jobTitle === item && (
-                          <MaterialCommunityIcons name="check" size={20} color="#FF9800" />
-                        )}
-                      </TouchableOpacity>
-                    )}
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="اترك فارغاً للإبقاء على القديمة"
+                    secureTextEntry={!showPassword}
+                    textAlign="right"
                   />
                 </View>
-              </TouchableOpacity>
-            </Modal>
+                <MaterialCommunityIcons name="lock" size={20} color="#FF9800" />
+              </View>
+            </View>
 
-            {/* Area Modal */}
-            <Modal visible={areaMenuVisible} transparent animationType="slide">
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setAreaMenuVisible(false)}
-              >
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHandle} />
-                  <Text style={styles.modalTitle}>اختر المنطقة</Text>
-                  <FlatList
-                    data={areasFromDb}
-                    keyExtractor={(item) => item}
-                    renderItem={({ item }: { item: string }) => (
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                          setArea(item);
-                          setAreaMenuVisible(false);
-                        }}
-                      >
-                        <Text style={styles.menuItemText}>{item}</Text>
-                        {area === item && (
-                          <MaterialCommunityIcons name="check" size={20} color="#FF9800" />
-                        )}
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
-              </TouchableOpacity>
-            </Modal>
+            {/* Description */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>الوصف</Text>
+              <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="أدخل وصف مختصر"
+                  multiline
+                  numberOfLines={4}
+                  textAlign="right"
+                  textAlignVertical="top"
+                />
+                <MaterialCommunityIcons
+                  name="text"
+                  size={20}
+                  color="#FF9800"
+                  style={styles.textAreaIcon}
+                />
+              </View>
+              <Text style={[styles.wordCount, { color: wordCount > 120 ? '#f44336' : '#888' }]}>
+                {wordCount} / 120 كلمة
+              </Text>
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+
+              {saving ? (
+                <Text style={styles.saveButtonText}>جاري الحفظ...</Text>
+              ) : (
+                <>
+                  <Text style={styles.saveButtonText}>حفظ التغييرات</Text>
+                  <MaterialCommunityIcons name="content-save" size={20} color="#fff" />
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.cancelButtonText}>إلغاء</Text>
+            </TouchableOpacity>
           </View>
-          
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Job Modal */}
+      <Modal visible={jobMenuVisible} transparent animationType="slide">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setJobMenuVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>اختر المهنة</Text>
+            <FlatList
+              data={jobsFromDb}
+              keyExtractor={(item) => item}
+              renderItem={({ item }: { item: string }) => (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setJobTitle(item);
+                    setJobMenuVisible(false);
+                  }}
+                >
+                  <Text style={styles.menuItemText}>{item}</Text>
+                  {jobTitle === item && (
+                    <MaterialCommunityIcons name="check" size={20} color="#FF9800" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Area Modal */}
+      <Modal visible={areaMenuVisible} transparent animationType="slide">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setAreaMenuVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>اختر المنطقة</Text>
+            <FlatList
+              data={areasFromDb}
+              keyExtractor={(item) => item}
+              renderItem={({ item }: { item: string }) => (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setArea(item);
+                    setAreaMenuVisible(false);
+                  }}
+                >
+                  <Text style={styles.menuItemText}>{item}</Text>
+                  {area === item && (
+                    <MaterialCommunityIcons name="check" size={20} color="#FF9800" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+
 
   );
 }

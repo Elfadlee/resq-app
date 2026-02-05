@@ -9,6 +9,22 @@ import AppHeader from "./components/AppHeader";
 import AppDrawer from "./components/AppDrawer";
 import MainScreen from "./screens/MainScreen";
 import { AlertProvider } from "./context/AlertContext";
+import { ModalProvider } from "./components/ModalProvider";
+import * as Notifications from "expo-notifications";
+import { registerForPushNotificationsAsync } from "./services/notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => {
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    } as Notifications.NotificationBehavior;
+  },
+});
+
+
+
 
 
 export default function RootLayout() {
@@ -19,6 +35,16 @@ export default function RootLayout() {
 
   const [policySection, setPolicySection] =
     useState<"privacy" | "terms" | "subscriptions">("privacy");
+
+    useEffect(() => {
+      (async () => {
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          console.log("🔔 PUSH TOKEN:", token);
+        }
+      })();
+    }, []);
+
 
   useEffect(() => {
     let InAppPurchases: any;
@@ -70,49 +96,51 @@ export default function RootLayout() {
   }
 
   return (
-    
+
     <SafeAreaProvider>
-      <AlertProvider>
-      <PaperProvider theme={theme}>
-        
-        {/* HEADER */}
-        <SafeAreaView style={{ backgroundColor: "#0A3A5B" }}>
-          <AppHeader onMenuOpen={() => setDrawerOpen(true)} />
-        </SafeAreaView>
+      <ModalProvider>
+          <AlertProvider>
+            <PaperProvider theme={theme}>
 
-        {/* SCREEN CONTENT */}
-        <View style={{ flex: 1, position: "relative" }}>
+              {/* HEADER */}
+              <SafeAreaView style={{ backgroundColor: "#0A3A5B" }}>
+                <AppHeader onMenuOpen={() => setDrawerOpen(true)} />
+              </SafeAreaView>
 
-          <MainScreen
-            currentScreen={currentScreen}
-            policySection={policySection}
-            setCurrentScreen={setCurrentScreen}
-          />
+              {/* SCREEN CONTENT */}
+              <View style={{ flex: 1, position: "relative" }}>
 
-          {/* DRAWER */}
-          <AppDrawer
-            visible={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            onNavigate={(route, section) => {
-              setDrawerOpen(false);
-              setCurrentScreen(route as any);
+                <MainScreen
+                  currentScreen={currentScreen}
+                  policySection={policySection}
+                  setCurrentScreen={setCurrentScreen}
+                />
 
-              if (section) {
-                setPolicySection(section);
-              }
-            }}
-          />
+                {/* DRAWER */}
+                <AppDrawer
+                  visible={drawerOpen}
+                  onClose={() => setDrawerOpen(false)}
+                  onNavigate={(route, section) => {
+                    setDrawerOpen(false);
+                    setCurrentScreen(route as any);
 
-          {/* FOOTER */}
-          <SafeAreaView style={{ backgroundColor: "#0B3C5D" }}>
-            <AppFooter setCurrentScreen={setCurrentScreen} />
-          </SafeAreaView>
+                    if (section) {
+                      setPolicySection(section);
+                    }
+                  }}
+                />
 
-        </View>
+                {/* FOOTER */}
+                <SafeAreaView style={{ backgroundColor: "#0B3C5D" }}>
+                  <AppFooter setCurrentScreen={setCurrentScreen} />
+                </SafeAreaView>
 
-      </PaperProvider>
-      </AlertProvider>
+              </View>
+
+            </PaperProvider>
+          </AlertProvider>
+      </ModalProvider>
     </SafeAreaProvider>
-    
+
   );
 }
