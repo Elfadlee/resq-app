@@ -1,50 +1,19 @@
-# Welcome to Rizq aapplication 
+About Rizq
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Rizq is a mobile application built with React Native and Expo, designed as a handyman marketplace for the Iraqi market.
 
-## Get started
+The idea of the app is to connect users with skilled workers (such as electricians, plumbers, and other service providers) in a simple and user-friendly way.
 
-1. Install dependencies
+The application is fully designed in Arabic with RTL support to match local user needs and provide a smooth experience.
 
-   ```bash
-   npm install
-   ```
+Key Features
+User authentication using Firebase Authentication
+Real-time data and storage with Firebase
+Search and browse service providers
+Contact forms for communication between users and workers
+Subscription system using Apple In-App Purchases
+Push notifications for updates and user engagement
+Project Status
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The app is currently in TestFlight and is fully functional.
+The next step is to release the Android version and expand the platform.
