@@ -12,37 +12,37 @@ It is fully designed in Arabic with RTL support to match local user needs and pr
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%201.jpeg" width="220"/><br/>
-  <b>Home Screen</b>
+ 
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%202.jpeg" width="220"/><br/>
-  <b>Search Screen</b>
+  
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%203.jpeg" width="220"/><br/>
-  <b>Worker Profile</b>
+  
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%204.jpeg" width="220"/><br/>
-  <b>Contact Form</b>
+  
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%205.jpeg" width="220"/><br/>
-  <b>Subscription Packages</b>
+  
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%206.jpeg" width="220"/><br/>
-  <b>User Profile</b>
+  
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Elfadlee/resq-app/main/App%20Screenshot%207.jpeg" width="220"/><br/>
-  <b>Notifications</b>
+
 </p>
 
 
