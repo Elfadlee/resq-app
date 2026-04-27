@@ -1,6 +1,7 @@
-ًًً# Welcome to Rizq Application
 
-Rizq is a mobile application built with React Native and Expo, designed as a handyman marketplace for the Iraqi market.
+# Welcome to Rezq App
+
+Rezq is a mobile application built with React Native and Expo, designed as a handyman marketplace for the Iraqi market.
 
 The app connects users with skilled workers such as electricians, plumbers, and other service providers in a simple and user-friendly way.
 
