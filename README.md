@@ -1,4 +1,4 @@
-About Rizq
+ Welcome to Rizq aapplication
 
 Rizq is a mobile application built with React Native and Expo, designed as a handyman marketplace for the Iraqi market.
 
